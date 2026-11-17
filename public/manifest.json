@@ -1,0 +1,15 @@
+{
+  "short_name": "Fitaval",
+  "name": "Fitaval - Gym Management CRM",
+  "icons": [
+    {
+      "src": "/fitaval_logo.png",
+      "type": "image/png",
+      "sizes": "1024x1024"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "display": "standalone"
+}
