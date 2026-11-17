@@ -171,7 +171,7 @@ graph TD
 | **Access Token Storage** | Stored strictly in runtime memory variables to prevent malicious browser scripts from extracting tokens via `localStorage`. | `src/shared/auth/tokenManager.js` |
 | **Session Isolation** | Non-sensitive session descriptors (`email`, `role`, `name`) live in `sessionStorage` (scoped to browser tab). | `src/portal/session.js` |
 | **Silent 401 Refresh** | On token expiration, `httpClient` queues incoming requests via a promise mutex, calls `/auth/token/refresh/`, and replays requests without user interruption. | `src/shared/api/httpClient.js` |
-| **Fail-Closed Gate** | Production builds automatically disallow mock mode (`USE_MOCK = false`) and require a valid, non-localhost `VITE_API_BASE_URL`. | `src/config/env.js` |
+| **Fail-Closed Gate** | Production builds automatically disallow mock mode and require a valid, non-localhost `VITE_API_BASE_URL`. | `src/config/env.js` |
 | **Route Protection** | Route guards in `CrmApp` and `AdminApp` reject unauthenticated navigation and immediately bounce users to `/login`. | `src/crm/App.jsx`, `src/admin/AdminApp.jsx` |
 | **Hardware Scanner** | Scans digital QR tokens containing cryptographic member IDs; queries backend before opening physical turnstiles. | `src/crm/components/QrScannerDialog.jsx` |
 

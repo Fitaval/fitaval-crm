@@ -12,7 +12,6 @@ import { API_BASE } from '../../config/env';
 import { httpClient } from '../../shared/api/httpClient';
 
 export { API_BASE };
-export const USE_MOCK = false;
 
 // Helper to execute authenticated requests to backend
 async function apiRequest(endpoint, options = {}) {
@@ -20,8 +19,6 @@ async function apiRequest(endpoint, options = {}) {
 }
 
 export const adminClient = {
-  isMock: false,
-
   // 1. Gym Management
   gyms: {
     async list(params = {}) {

@@ -14,7 +14,6 @@ import { httpClient } from '../../shared/api/httpClient';
 import { tokenManager } from '../../shared/auth/tokenManager';
 
 export { API_BASE };
-export const USE_MOCK = false;
 
 // Helper for authenticated HTTP requests to Django REST Framework backend
 async function apiRequest(endpoint, options = {}) {
@@ -80,7 +79,6 @@ function createEntityStore(endpoint) {
 
 // CRM Client API matching exact surface expected by pages
 export const client = {
-  isMock: false,
   apiBase: API_BASE,
 
   entities: {

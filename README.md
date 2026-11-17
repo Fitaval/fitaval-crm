@@ -24,33 +24,19 @@ After signing in, the account's role dynamically routes to the appropriate appli
 
 ## 2. Environment Configuration & Security Policy
 
-Fitaval enforces a **strict fail-closed security policy**:
+Fitaval connects directly to the live Django REST Framework backend API (`https://partner.fitaval.com/api/v1`):
 
-* **Development Mode (`VITE_APP_ENV=development`):** Local mock fixtures can be enabled via `VITE_ENABLE_MOCK_API=true` for offline UI testing and rapid prototyping.
-* **Production Mode (`VITE_APP_ENV=production`):** Mock mode is **strictly disabled**. `VITE_API_BASE_URL` is mandatory and automatically rejects `localhost` or `127.0.0.1`. If production environment variables are missing or insecure, the application halts startup immediately with a `ConfigErrorScreen`.
+* **Live API Only:** All mock data and simulated endpoints have been completely removed from the codebase. All authentication and data fetching strictly query the backend API.
+* **Production Guards:** `VITE_API_BASE_URL` is mandatory in production and automatically rejects `localhost` or `127.0.0.1`. If production environment variables are missing or insecure, the application halts startup immediately with a `ConfigErrorScreen`.
 
-### 2.1 Configuration Files
+### 2.1 Configuration (`.env`)
 
-* **`.env`**: Local development configuration (git-ignored for security).
-* **`.env.example`**: Template for local development and onboarding.
-* **`.env.production.example`**: Template for production cloud hosting (Vercel, Netlify, Docker).
+Fitaval uses a single `.env` file configured for the target backend:
 
-#### Example Development Configuration (`.env`)
 ```env
-VITE_API_BASE_URL=http://127.0.0.1:8000/api/v1
-VITE_ENABLE_MOCK_API=true
-VITE_APP_ENV=development
-VITE_IMAGE_BASE_URL=http://127.0.0.1:8000
-VITE_STRIPE_PUBLIC_KEY=pk_test_sample_fitaval_key
-```
-
-#### Example Production Configuration (`.env.production`)
-```env
-VITE_API_BASE_URL=https://api.fitaval.com/api/v1
-VITE_ENABLE_MOCK_API=false
+VITE_API_BASE_URL=https://partner.fitaval.com/api/v1
 VITE_APP_ENV=production
-VITE_IMAGE_BASE_URL=https://cdn.fitaval.com
-VITE_STRIPE_PUBLIC_KEY=pk_live_your_production_key
+VITE_IMAGE_BASE_URL=https://partner.fitaval.com
 ```
 
 ---
@@ -78,20 +64,7 @@ Open your browser at **`http://localhost:5173`**.
 
 ---
 
-## 4. Demo Credentials (Development Mode Only)
-
-When running in development mode (`VITE_APP_ENV=development` and `VITE_ENABLE_MOCK_API=true`), built-in mock accounts are available:
-
-| Email | Password | Role | Opens |
-|---|---|---|---|
-| `owner@fitaval.com` | `owner123` | Gym Owner | **CRM** (`/`) |
-| `admin@fitaval.com` | `admin123` | Super Admin | **Admin Panel** (`/admin`) |
-
-> 🔒 **Security Notice:** In production builds (`VITE_APP_ENV=production`), all mock accounts and demo login pathways are completely stripped from the application bundle. Production authentication strictly queries the backend API.
-
----
-
-## 5. Linting, Testing & CI Pipeline
+## 4. Linting, Testing & CI Pipeline
 
 ### 5.1 Code Quality & Linting
 Fitaval enforces strict code standards using ESLint 9 with React and React Hooks plugins:
@@ -137,7 +110,7 @@ npm run preview
 ```
 
 ### 6.3 Deployment Targets
-* **Vercel / Netlify:** Build command `npm run build`, publish directory `dist`. Configure `VITE_API_BASE_URL` and `VITE_ENABLE_MOCK_API=false` in environment settings.
+* **Vercel / Netlify:** Build command `npm run build`, publish directory `dist`. Configure `VITE_API_BASE_URL` in environment settings.
 * **Docker / Nginx:** Serve the generated `dist/` folder using Nginx with SPA fallback: `try_files $uri $uri/ /index.html;`.
 
 ---

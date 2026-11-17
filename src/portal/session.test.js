@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { login, logout, getSession, startSession, USE_MOCK } from './session';
+import { login, logout, getSession, startSession } from './session';
 import { tokenManager } from '../shared/auth/tokenManager';
 import { httpClient, ApiError } from '../shared/api/httpClient';
 
@@ -22,18 +22,16 @@ describe('Portal Session & Auth Flow', () => {
   });
 
   it('authenticates admin user correctly', async () => {
-    if (!USE_MOCK) {
-      vi.spyOn(httpClient, 'post').mockResolvedValueOnce({
-        access_token: 'admin-jwt-token-xyz',
-        refresh_token: 'refresh-jwt-xyz',
-        user: {
-          id: 'adm_1',
-          name: 'Super Admin',
-          email: 'admin@fitaval.com',
-          role: 'admin',
-        },
-      });
-    }
+    vi.spyOn(httpClient, 'post').mockResolvedValueOnce({
+      access_token: 'admin-jwt-token-xyz',
+      refresh_token: 'refresh-jwt-xyz',
+      user: {
+        id: 'adm_1',
+        name: 'Super Admin',
+        email: 'admin@fitaval.com',
+        role: 'admin',
+      },
+    });
 
     const res = await login('admin@fitaval.com', 'admin123');
     expect(res.ok).toBe(true);
@@ -46,17 +44,15 @@ describe('Portal Session & Auth Flow', () => {
   });
 
   it('authenticates gym owner correctly', async () => {
-    if (!USE_MOCK) {
-      vi.spyOn(httpClient, 'post').mockResolvedValueOnce({
-        access_token: 'crm-jwt-token-abc',
-        user: {
-          id: 'usr_gym_1',
-          name: 'Gym Owner',
-          email: 'owner@fitaval.com',
-          role: 'crm',
-        },
-      });
-    }
+    vi.spyOn(httpClient, 'post').mockResolvedValueOnce({
+      access_token: 'crm-jwt-token-abc',
+      user: {
+        id: 'usr_gym_1',
+        name: 'Gym Owner',
+        email: 'owner@fitaval.com',
+        role: 'crm',
+      },
+    });
 
     const res = await login('owner@fitaval.com', 'owner123');
     expect(res.ok).toBe(true);
@@ -69,11 +65,9 @@ describe('Portal Session & Auth Flow', () => {
   });
 
   it('handles invalid credentials correctly', async () => {
-    if (!USE_MOCK) {
-      vi.spyOn(httpClient, 'post').mockRejectedValueOnce(
-        new ApiError('Invalid email or password.', 401)
-      );
-    }
+    vi.spyOn(httpClient, 'post').mockRejectedValueOnce(
+      new ApiError('Invalid email or password.', 401)
+    );
 
     const res = await login('admin@fitaval.com', 'wrongpassword');
     expect(res.ok).toBe(false);
@@ -85,9 +79,7 @@ describe('Portal Session & Auth Flow', () => {
     startSession({ role: 'admin', email: 'admin@fitaval.com', token: 'tok-123' });
     expect(getSession()).not.toBeNull();
 
-    if (!USE_MOCK) {
-      vi.spyOn(httpClient, 'post').mockResolvedValueOnce({});
-    }
+    vi.spyOn(httpClient, 'post').mockResolvedValueOnce({});
     await logout();
 
     expect(getSession()).toBeNull();

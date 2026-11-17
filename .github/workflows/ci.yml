@@ -39,7 +39,6 @@ jobs:
       - name: Production Bundle Build
         run: npm run build
         env:
-          VITE_API_BASE_URL: https://api.fitaval.com/api/v1
-          VITE_ENABLE_MOCK_API: 'false'
+          VITE_API_BASE_URL: https://partner.fitaval.com/api/v1
           VITE_APP_ENV: production
 

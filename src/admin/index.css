@@ -6,6 +6,8 @@
 /* Colors are the CRM's exact tokens (src/crm/index.css, light theme): CRM green primary, neutral foreground, soft green accent.
    Layout: white sidebar + white header on a muted canvas, same as the CRM. */
 :root{
+  /* Brand Palette */
+  --color-1:#009743; --color-2:#0F0F0F; --color-3:#063219; --color-4:#02B350; --color-5:#FFF;
   --background:0 0% 100%; --foreground:0 0% 9%;
   --card:0 0% 100%; --card-foreground:0 0% 9%;
   --popover:0 0% 100%; --popover-foreground:0 0% 9%;

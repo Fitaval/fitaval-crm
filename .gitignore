@@ -12,11 +12,9 @@ build/
 .vite/
 .turbo/
 
-# Environment files & Secrets
-.env
-.env.*
-!.env.example
-!.env.*.example
+# Environment files & Secrets (local overrides only)
+.env.local
+.env.*.local
 
 # Logs
 logs/

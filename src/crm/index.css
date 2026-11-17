@@ -5,6 +5,13 @@
 
 @layer base {
   :root {
+    /* Brand Palette */
+    --color-1: #009743;
+    --color-2: #0F0F0F;
+    --color-3: #063219;
+    --color-4: #02B350;
+    --color-5: #FFF;
+
     --background: 0 0% 100%;
     --foreground: 0 0% 9%;
     --card: 0 0% 100%;

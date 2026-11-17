@@ -16,7 +16,6 @@ import { tokenManager } from '../shared/auth/tokenManager';
 import { httpClient } from '../shared/api/httpClient';
 
 export { API_BASE };
-export const USE_MOCK = false;
 
 const PENDING_KEY = 'fitaval_pending_signup';
 const ss = () => (typeof window !== 'undefined' ? window.sessionStorage : null);

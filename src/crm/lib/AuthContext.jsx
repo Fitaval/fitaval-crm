@@ -25,21 +25,11 @@ export const AuthProvider = ({ children }) => {
   const initialUser = getInitialUser();
   const [user, setUser] = useState(initialUser);
   const [isAuthenticated, setIsAuthenticated] = useState(Boolean(initialUser));
-  const [isLoadingAuth, setIsLoadingAuth] = useState(!initialUser && !client.isMock);
-  const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(!client.isMock);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(!initialUser);
+  const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(true);
   const [authError, setAuthError] = useState(null);
   const [authChecked, setAuthChecked] = useState(Boolean(initialUser));
-  const [appPublicSettings, setAppPublicSettings] = useState(
-    client.isMock
-      ? {
-          id: 'fitaval-crm',
-          public_settings: {
-            app_name: 'Fitaval Gym Manager',
-            auth_mode: 'public',
-          },
-        }
-      : null
-  );
+  const [appPublicSettings, setAppPublicSettings] = useState(null);
 
   useEffect(() => {
     checkAppState();
@@ -47,9 +37,7 @@ export const AuthProvider = ({ children }) => {
 
   const checkAppState = async () => {
     try {
-      if (!client.isMock) {
-        setIsLoadingPublicSettings(true);
-      }
+      setIsLoadingPublicSettings(true);
       setAuthError(null);
 
       const publicSettings = await client.app.getPublicSettings();
@@ -66,7 +54,7 @@ export const AuthProvider = ({ children }) => {
 
   const checkUserAuth = async () => {
     try {
-      if (!client.isMock && !initialUser) {
+      if (!initialUser) {
         setIsLoadingAuth(true);
       }
       const currentUser = await client.auth.me();

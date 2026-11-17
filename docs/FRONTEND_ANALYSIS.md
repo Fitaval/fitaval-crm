@@ -22,7 +22,6 @@ The Fitaval frontend is built on a modern, decoupled single-page application (SP
 | **QR Generation** | `qrcode-generator` | `^1.4.4` | Generates SVG/Canvas QR codes for digital member access passes |
 | **File Generation** | `exceljs` + `jspdf` + `html2canvas` | `^4.4.0` / `^4.2.1` / `^1.4.1` | Client-side Excel spreadsheets and printable PDF membership passes |
 | **Date Arithmetic** | `date-fns` | `^3.6.0` | Date formatting, difference calculation, calendar month intervals |
-| **Payments** | `@stripe/stripe-js` + `@stripe/react-stripe-js`| `^5.2.0` / `^3.0.0` | Embedded Stripe Elements for SaaS subscription upgrades |
 
 ---
 

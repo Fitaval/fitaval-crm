@@ -109,7 +109,12 @@ export async function httpClient(endpoint, options = {}) {
   } = options;
 
   const cleanBase = API_BASE.replace(/\/+$/, '');
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  let cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+
+  // Guard against duplicate /crm prefix if API_BASE contains /crm
+  if (cleanBase.endsWith('/crm') && cleanEndpoint.startsWith('/crm/')) {
+    cleanEndpoint = cleanEndpoint.slice(4);
+  }
 
   if (IS_PROD && (!cleanBase || cleanBase.includes('127.0.0.1') || cleanBase.includes('localhost'))) {
     const configErr = new ApiError('Production API_BASE is misconfigured or pointing to localhost', 500);
