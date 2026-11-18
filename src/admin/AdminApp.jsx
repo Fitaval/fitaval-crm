@@ -205,8 +205,8 @@ function AdminAppContent() {
         const filteredUsers = rawUsers.filter((u) => {
           const r = (u.role || '').toLowerCase();
           const name = (u.name || u.full_name || '').toLowerCase();
-          if (r === 'gym_owner' || r === 'super_admin' || r === 'admin' || r === 'owner' || r === 'staff') return false;
-          if (name === 'gym owner' || name === 'super admin') return false;
+          if (r === 'super_admin' || r === 'admin') return false;
+          if (name === 'super admin') return false;
           return true;
         });
         const normUsers = filteredUsers.map((u, i) => {
