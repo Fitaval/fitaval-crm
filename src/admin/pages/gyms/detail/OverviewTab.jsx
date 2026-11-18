@@ -36,8 +36,8 @@ export function OverviewTab({ g }) {
   const hoursList = Array.isArray(g?.hours) ? g.hours : [];
   const photosList = Array.isArray(g?.photos) ? g.photos : [];
   const addressText = [g?.addr || g?.address, g?.loc || g?.city, g?.zip].filter(Boolean).join(', ') || 'Not set';
-  const phoneText = g?.phone || g?.contact_phone || 'Not set';
-  const emailText = g?.email || g?.contact_email || 'Not set';
+  const phoneText = g?.phone || g?.contact_phone || g?.owner_phone || 'Not set';
+  const emailText = g?.email || g?.contact_email || g?.owner_email || 'Not set';
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">

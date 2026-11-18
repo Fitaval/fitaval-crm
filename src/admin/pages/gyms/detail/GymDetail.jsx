@@ -51,6 +51,11 @@ export function GymDetail({ routeGymId }) {
 
   if (!gym) return <Locked title="Gym not found" text="Go back to All Gyms and pick a gym from the list." />;
 
+  const ownerObj = typeof gym.owner === 'object' ? gym.owner : null;
+  const ownerName = ownerObj?.name || (typeof gym.owner === 'string' ? gym.owner : (gym.owner_name || 'Gym Owner'));
+  const ownerEmail = ownerObj?.email || gym.contact_email || gym.email || gym.owner_email || '';
+  const ownerPhone = ownerObj?.phone || gym.contact_phone || gym.phone || gym.owner_phone || '';
+
   const g = {
     ...gym,
     staff: Array.isArray(gym.staff) ? gym.staff : [],
@@ -64,7 +69,12 @@ export function GymDetail({ routeGymId }) {
     logo_url: gym.logo_url || (Array.isArray(gym.photos) ? (gym.photos.find((p) => p.is_thumbnail)?.url || gym.photos.find((p) => p.is_thumbnail)?.src) : '') || '',
     hours: Array.isArray(gym.hours) ? gym.hours : [],
     loc: gym.loc || gym.city || gym.address || 'Kerala',
-    owner: typeof gym.owner === 'object' ? (gym.owner?.name || 'Gym Owner') : (gym.owner || 'Gym Owner'),
+    owner: ownerName,
+    owner_obj: ownerObj,
+    owner_email: ownerEmail,
+    owner_phone: ownerPhone,
+    email: gym.email || gym.contact_email || ownerEmail,
+    phone: gym.phone || gym.contact_phone || ownerPhone,
     code: gym.registration_number || gym.reg_code || gym.code || 'GYM001',
   };
 

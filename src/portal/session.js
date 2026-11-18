@@ -119,17 +119,18 @@ export async function signUp(email, password, meta = {}) {
 
   try {
     await httpClient.post(
-      '/auth/register/',
+      '/auth/portal/register/',
       {
         email: e,
         password,
         gym_name: meta.gymName || 'Fitaval Club',
         full_name: meta.ownerName || e.split('@')[0],
+        phone: meta.phone || '',
         role: 'crm',
       },
       { skipAuth: true, retryOn401: false }
     );
-    ss()?.setItem(PENDING_KEY, JSON.stringify({ email: e, password, name: meta.ownerName, gymName: meta.gymName }));
+    ss()?.setItem(PENDING_KEY, JSON.stringify({ email: e, password, name: meta.ownerName, gymName: meta.gymName, phone: meta.phone || '' }));
     return { ok: true, email: e };
   } catch (err) {
     return { ok: false, error: err.message || 'Unable to connect to registration server.' };
@@ -162,7 +163,7 @@ export async function verifySignUp(code) {
 
   try {
     const data = await httpClient.post(
-      '/auth/verify-otp/',
+      '/auth/portal/verify-otp/',
       { email: pending.email, otp: code, role: 'crm' },
       { skipAuth: true, retryOn401: false }
     );

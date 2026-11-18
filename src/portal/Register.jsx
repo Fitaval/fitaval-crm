@@ -6,6 +6,7 @@ export default function Register() {
   const [gymName, setGymName] = useState('');
   const [ownerName, setOwnerName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [code, setCode] = useState('');
@@ -20,7 +21,7 @@ export default function Register() {
     if (!ownerName.trim()) return setError('Enter your full name.');
     if (password !== confirm) return setError('Passwords do not match.');
     setLoading(true);
-    const res = await signUp(email, password, { gymName: gymName.trim(), ownerName: ownerName.trim() });
+    const res = await signUp(email, password, { gymName: gymName.trim(), ownerName: ownerName.trim(), phone: phone.trim() });
     setLoading(false);
     if (!res.ok) return setError(res.error);
     setEmail(res.email);
@@ -133,6 +134,19 @@ export default function Register() {
           value={email}
           onChange={(e) => {
             setEmail(e.target.value);
+            setError('');
+          }}
+        />
+
+        <label htmlFor="pt-phone">Phone Number (Optional)</label>
+        <input
+          id="pt-phone"
+          type="tel"
+          autoComplete="tel"
+          placeholder="e.g. +91 98765 43210"
+          value={phone}
+          onChange={(e) => {
+            setPhone(e.target.value);
             setError('');
           }}
         />

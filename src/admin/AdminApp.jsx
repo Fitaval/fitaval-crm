@@ -149,6 +149,9 @@ function AdminAppContent() {
               hours: Array.isArray(g.hours) ? g.hours : [],
               loc: g.loc || g.city || g.address || 'Kerala',
               owner: typeof g.owner === 'object' ? (g.owner?.name || 'Gym Owner') : (g.owner || 'Gym Owner'),
+              owner_obj: typeof g.owner === 'object' ? g.owner : null,
+              email: g.email || g.contact_email || (typeof g.owner === 'object' ? g.owner?.email : '') || '',
+              phone: g.phone || g.contact_phone || (typeof g.owner === 'object' ? g.owner?.phone : '') || '',
             };
           });
           setGyms(map);
@@ -192,8 +195,8 @@ function AdminAppContent() {
             name: a.name || a.gym_name || 'Gym',
             loc: a.loc || a.city || a.address || 'Kerala',
             owner: a.owner || a.owner_name || 'Gym Owner',
-            email: a.email || a.owner_email || '',
-            phone: a.phone || a.owner_phone || '',
+            email: a.email || a.owner_email || (typeof a.owner === 'object' ? a.owner?.email : '') || '',
+            phone: a.phone || a.owner_phone || (typeof a.owner === 'object' ? a.owner?.phone : '') || '',
             status: titleStatus,
             on: displayDate || 'Today',
           };
@@ -206,6 +209,8 @@ function AdminAppContent() {
           const r = (u.role || '').toLowerCase();
           const name = (u.name || u.full_name || '').toLowerCase();
           if (r === 'super_admin' || r === 'admin') return false;
+          if (r === 'gym_owner' || r === 'crm') return false;
+          if (u.status === 'pending_verification' || u.status === 'Pending') return false;
           if (name === 'super admin') return false;
           return true;
         });
