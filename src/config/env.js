@@ -12,7 +12,7 @@ export const IS_TEST = rawMode === 'test' || (typeof process !== 'undefined' && 
 
 // Base API URL configuration
 const DEFAULT_DEV_API = 'http://127.0.0.1:8000/api/v1';
-const DEFAULT_PROD_API = 'https://partner.fitaval.com/api/v1';
+const DEFAULT_PROD_API = 'https://api.fitaval.com/api/v1';
 const rawApiBase = import.meta.env.VITE_API_BASE_URL;
 
 export const API_BASE = (function resolveApiBase() {

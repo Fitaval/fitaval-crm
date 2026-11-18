@@ -1,7 +1,7 @@
 # Fitaval Frontend — Production Stage & Deployment Specification
 
-> **Target Backend API**: `https://partner.fitaval.com/api/v1/crm/`  
-> **Base API Root**: `https://partner.fitaval.com/api/v1`  
+> **Target Backend API**: `https://api.fitaval.com/api/v1/crm/`  
+> **Base API Root**: `https://api.fitaval.com/api/v1`  
 > **Environment**: Production (`VITE_APP_ENV=production`)  
 > **Architecture**: Direct Live API Only (No Mock Layer)
 
@@ -34,7 +34,7 @@ Fitaval is a unified, single-repository React + Vite application that serves thr
                                         v
 +---------------------------------------------------------------------------------+
 |                       FITAVAL LIVE PRODUCTION BACKEND                           |
-|                       https://partner.fitaval.com/api/v1                        |
+|                       https://api.fitaval.com/api/v1                        |
 |                                                                                 |
 |   +--------------------+     +--------------------+    +--------------------+   |
 |   |   /api/v1/auth/    |     |   /api/v1/crm/     |    |  /api/v1/admin/    |   |
@@ -54,13 +54,13 @@ The application runtime is governed by [src/config/env.js](file:///home/bineesh/
 
 ```ini
 # Target Django REST Framework production API
-VITE_API_BASE_URL=https://partner.fitaval.com/api/v1
+VITE_API_BASE_URL=https://api.fitaval.com/api/v1
 
 # Deployment environment identifier
 VITE_APP_ENV=production
 
 # Media / CDN Base URL for uploaded gym visuals & documents
-VITE_IMAGE_BASE_URL=https://partner.fitaval.com
+VITE_IMAGE_BASE_URL=https://api.fitaval.com
 ```
 
 ### URL Normalization & Defensive Routing
@@ -78,7 +78,7 @@ if (base.endsWith('/crm')) {
 
 ## 3. Production API Endpoint Map
 
-All requests are dispatched to `https://partner.fitaval.com/api/v1`:
+All requests are dispatched to `https://api.fitaval.com/api/v1`:
 
 ### 3.1 Authentication & Session (`/auth/`)
 | Endpoint | Method | Description |
@@ -145,7 +145,7 @@ Fitaval includes a native [vercel.json](file:///home/bineesh/Projects/fitaval-ap
 # Deploy to Vercel production
 vercel --prod
 ```
-Ensure the environment variables (`VITE_API_BASE_URL=https://partner.fitaval.com/api/v1`, `VITE_APP_ENV=production`) are configured in the Vercel Project Settings.
+Ensure the environment variables (`VITE_API_BASE_URL=https://api.fitaval.com/api/v1`, `VITE_APP_ENV=production`) are configured in the Vercel Project Settings.
 
 ### Option B: Nginx Static Host
 Build the static bundle:
@@ -158,7 +158,7 @@ Copy `dist/` to your web server (e.g., `/var/www/fitaval/html`). Configure Nginx
 server {
     listen 80;
     listen 443 ssl http2;
-    server_name partner.fitaval.com app.fitaval.com;
+    server_name api.fitaval.com app.fitaval.com;
 
     root /var/www/fitaval/html;
     index index.html;
@@ -190,7 +190,7 @@ Before triggering a production release, run through this verification checklist:
 - [x] **Unit & Integration Tests**: `npm run test` passes (21/21 tests).
 - [x] **Linter Cleanliness**: `npm run lint` completes with zero errors.
 - [x] **Production Build**: `npm run build` completes successfully.
-- [x] **Environment Guard**: `IS_PROD` actively validates that `API_BASE` points to `https://partner.fitaval.com/api/v1` and rejects `127.0.0.1` / `localhost`.
+- [x] **Environment Guard**: `IS_PROD` actively validates that `API_BASE` points to `https://api.fitaval.com/api/v1` and rejects `127.0.0.1` / `localhost`.
 - [x] **Fail-Closed Security**: Mock mode and fixtures removed; all traffic routes strictly to the live Django REST backend.
 - [x] **JWT Token Refresh**: Automatic interception and token renewal on HTTP 401 verified.
-- [x] **CORS Configuration**: Ensure the backend at `partner.fitaval.com` has allowed the frontend domain (`Access-Control-Allow-Origin`).
+- [x] **CORS Configuration**: Ensure the backend at `api.fitaval.com` has allowed the frontend domain (`Access-Control-Allow-Origin`).

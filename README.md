@@ -24,7 +24,7 @@ After signing in, the account's role dynamically routes to the appropriate appli
 
 ## 2. Environment Configuration & Security Policy
 
-Fitaval connects directly to the live Django REST Framework backend API (`https://partner.fitaval.com/api/v1`):
+Fitaval connects directly to the live Django REST Framework backend API (`https://api.fitaval.com/api/v1`):
 
 * **Live API Only:** All mock data and simulated endpoints have been completely removed from the codebase. All authentication and data fetching strictly query the backend API.
 * **Production Guards:** `VITE_API_BASE_URL` is mandatory in production and automatically rejects `localhost` or `127.0.0.1`. If production environment variables are missing or insecure, the application halts startup immediately with a `ConfigErrorScreen`.
@@ -34,9 +34,9 @@ Fitaval connects directly to the live Django REST Framework backend API (`https:
 Fitaval uses a single `.env` file configured for the target backend:
 
 ```env
-VITE_API_BASE_URL=https://partner.fitaval.com/api/v1
+VITE_API_BASE_URL=https://api.fitaval.com/api/v1
 VITE_APP_ENV=production
-VITE_IMAGE_BASE_URL=https://partner.fitaval.com
+VITE_IMAGE_BASE_URL=https://api.fitaval.com
 ```
 
 ---
