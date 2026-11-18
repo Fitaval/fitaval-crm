@@ -147,17 +147,36 @@ export default function Members() {
     if (plan && newStartDate) {
       try {
         const start = new Date(newStartDate);
-        const days = plan.duration_days || 30;
-        const computedEnd = addDays(start, days);
-        const formattedEnd = format(computedEnd, "yyyy-MM-dd");
+        const isDaily =
+          Number(plan.duration_days) === 1 ||
+          String(plan.name || "").toLowerCase().includes("day") ||
+          String(plan.name || "").toLowerCase().includes("daily") ||
+          String(plan.name || "").toLowerCase().includes("pass");
+
+        let formattedEnd;
+        let calculatedFee = Number(plan.price) || 0;
+
+        if (isDaily) {
+          if (form.end_date && new Date(form.end_date) >= start) {
+            formattedEnd = form.end_date;
+            const diff = Math.max(1, differenceInDays(new Date(formattedEnd), start) + 1);
+            calculatedFee = calculatedFee * diff;
+          } else {
+            formattedEnd = format(start, "yyyy-MM-dd");
+          }
+        } else {
+          const days = plan.duration_days || 30;
+          const computedEnd = addDays(start, days);
+          formattedEnd = format(computedEnd, "yyyy-MM-dd");
+        }
 
         const today = new Date();
         const computedStatus =
-          computedEnd < today
+          new Date(formattedEnd) < today
             ? "inactive"
-            : addDays(computedEnd, -7) < today
+            : addDays(new Date(formattedEnd), -7) < today
             ? "expiring"
-            : (prev.status || "active");
+            : (form.status || "active");
 
         setForm((prev) => ({
           ...prev,
@@ -165,7 +184,7 @@ export default function Members() {
           start_date: newStartDate,
           end_date: formattedEnd,
           status: prev.status || computedStatus,
-          paid_amount: plan.price ?? prev.paid_amount,
+          paid_amount: calculatedFee,
         }));
         return;
       } catch {
@@ -178,6 +197,37 @@ export default function Members() {
       start_date: newStartDate,
       paid_amount: plan?.price ?? prev.paid_amount,
     }));
+  };
+
+  const handleEndDateChange = (newEndDate) => {
+    setForm((prev) => {
+      const plan = plans.find((p) => p.id === prev.plan_id);
+      let newFee = prev.paid_amount;
+      if (plan) {
+        const isDaily =
+          Number(plan.duration_days) === 1 ||
+          String(plan.name || "").toLowerCase().includes("day") ||
+          String(plan.name || "").toLowerCase().includes("daily") ||
+          String(plan.name || "").toLowerCase().includes("pass");
+        if (isDaily && prev.start_date && newEndDate) {
+          try {
+            const s = new Date(prev.start_date);
+            const e = new Date(newEndDate);
+            if (e >= s) {
+              const diff = Math.max(1, differenceInDays(e, s) + 1);
+              newFee = (Number(plan.price) || 0) * diff;
+            }
+          } catch {
+            // ignore
+          }
+        }
+      }
+      return {
+        ...prev,
+        end_date: newEndDate,
+        paid_amount: newFee,
+      };
+    });
   };
 
   const filtered = useMemo(() => {
@@ -283,63 +333,23 @@ export default function Members() {
       };
 
       if (isEditMode && form.id) {
-        const prevMember = members.find((m) => m.id === form.id);
         const updated = await client.entities.Member.update(form.id, memberPayload);
         setMembers((prev) => prev.map((m) => (m.id === form.id ? updated : m)));
         if (selectedMember?.id === form.id) setSelectedMember(updated);
 
-        // If marked paid from previously unpaid status, record income transaction
-        const wasUnpaid = prevMember?.payment_status === "unpaid" && form.payment_status === "paid";
-        if (wasUnpaid && planFee > 0) {
-          try {
-            await client.entities.Transaction.create({
-              type: "income",
-              amount: planFee,
-              category: "Membership",
-              payment_method: form.payment_method || "cash",
-              date: form.start_date || format(new Date(), "yyyy-MM-dd"),
-              description: `${memberPayload.plan_name} plan payment - ${updated.name}`,
-              member_id: updated.id,
-              member_name: updated.name,
-            });
-          } catch (txErr) {
-            console.error("Failed to auto-record transaction for member update:", txErr);
-          }
-        }
-
         toast({
           title: "Member updated",
-          description: wasUnpaid && planFee > 0
-            ? `${updated.name}'s payment of ₹${planFee.toLocaleString("en-IN")} recorded in Finance & Dashboard income.`
-            : `${updated.name}'s profile was saved successfully.`,
+          description: `${updated.name}'s profile was saved successfully.`,
         });
       } else {
         const created = await client.entities.Member.create(memberPayload);
         setMembers((prev) => [created, ...prev]);
 
-        // Automatically create income transaction in Finance & Dashboard
-        if (form.payment_status === "paid" && planFee > 0) {
-          try {
-            await client.entities.Transaction.create({
-              type: "income",
-              amount: planFee,
-              category: "Membership",
-              payment_method: form.payment_method || "upi",
-              date: form.start_date || format(new Date(), "yyyy-MM-dd"),
-              description: `${memberPayload.plan_name} membership plan - ${created.name}`,
-              member_id: created.id,
-              member_name: created.name,
-            });
-          } catch (txErr) {
-            console.error("Failed to auto-create income transaction:", txErr);
-          }
-        }
-
         toast({
-          title: "Member created & income recorded",
+          title: "Member created & enrolled",
           description: `${created.name} enrolled${
             form.payment_status === "paid" && planFee > 0
-              ? ` · ₹${planFee.toLocaleString("en-IN")} automatically added to Finance & Dashboard income`
+              ? ` · ₹${planFee.toLocaleString("en-IN")} recorded in Finance & Dashboard`
               : ""
           }!`,
         });
@@ -751,7 +761,7 @@ export default function Members() {
                   autoComplete="off"
                   type="date"
                   value={form.end_date}
-                  onChange={(e) => setForm({ ...form, end_date: e.target.value })}
+                  onChange={(e) => handleEndDateChange(e.target.value)}
                   className="mt-1 rounded-xl h-11 text-xs bg-muted/40 font-medium"
                 />
               </div>
@@ -854,6 +864,26 @@ export default function Members() {
                       placeholder="Amount"
                       className="mt-1 rounded-xl h-10 text-xs"
                     />
+                    {(() => {
+                      const selPlan = plans.find((p) => p.id === form.plan_id);
+                      const isDaily = selPlan && (
+                        Number(selPlan.duration_days) === 1 ||
+                        String(selPlan.name || "").toLowerCase().includes("day") ||
+                        String(selPlan.name || "").toLowerCase().includes("daily") ||
+                        String(selPlan.name || "").toLowerCase().includes("pass")
+                      );
+                      const dCount = (form.start_date && form.end_date)
+                        ? Math.max(1, differenceInDays(new Date(form.end_date), new Date(form.start_date)) + 1)
+                        : 1;
+                      if (isDaily && dCount > 1) {
+                        return (
+                          <p className="text-[10px] text-primary font-semibold mt-1">
+                            ₹{selPlan.price} × {dCount} days = ₹{selPlan.price * dCount}
+                          </p>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 </div>
 

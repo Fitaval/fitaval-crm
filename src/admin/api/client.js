@@ -19,6 +19,13 @@ async function apiRequest(endpoint, options = {}) {
 }
 
 export const adminClient = {
+  // Central Super Admin Dashboard
+  dashboard: {
+    async get() {
+      return apiRequest('/admin/dashboard/');
+    },
+  },
+
   // 1. Gym Management
   gyms: {
     async list(params = {}) {

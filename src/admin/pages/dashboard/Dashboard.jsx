@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -163,8 +164,9 @@ export function TrendCard() {
   );
 }
 
-export function FeedCard() {
-  const { feed } = useApp();
+export function FeedCard({ feedItems }) {
+  const { feed: ctxFeed } = useApp();
+  const feed = feedItems && feedItems.length > 0 ? feedItems : ctxFeed;
   return (
     <Card className="flex min-h-0 flex-col">
       <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4">
@@ -206,24 +208,39 @@ export function FeedCard() {
 }
 
 export function Dashboard() {
-  const { branch, perms, role, occ, scans, setSection, approvals, dark, members, gyms } = useApp();
+  const { branch, perms, role, occ, scans, setSection, approvals, dark, members, gyms, client } = useApp();
+  const [dashData, setDashData] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (client?.dashboard?.get) {
+      client.dashboard.get().then((res) => {
+        if (isMounted && res) {
+          setDashData(res.data || res);
+        }
+      }).catch((e) => console.warn('Admin dashboard fetch failed:', e));
+    }
+    return () => { isMounted = false; };
+  }, [client]);
+
   const C = chartColors(dark);
-  const act = (members || []).filter((m) => m.status === 'Active').length;
-  const frz = (members || []).filter((m) => m.status === 'Frozen' || m.status === 'Expired').length;
+  const act = dashData?.active_memberships ?? (members || []).filter((m) => m.status === 'Active').length;
+  const frz = dashData?.frozen_memberships ?? (members || []).filter((m) => m.status === 'Frozen' || m.status === 'Expired').length;
   const totMembers = act + frz || 1;
-  const maxCap = Math.max(act, 10);
-  const active = act;
-  const pct = maxCap ? Math.round((active / maxCap) * 100) : 0;
-  const mood = pct < 60 ? 'Comfortable' : pct < 85 ? 'Busy' : 'Near capacity';
-  const mrr = act > 0 ? act * 1500 : 0;
-  const checkins = 0;
+  const maxCap = dashData?.live_capacity?.max || Math.max(act, 10);
+  const active = dashData?.live_capacity?.current ?? act;
+  const pct = dashData?.live_capacity?.percentage ?? (maxCap ? Math.round((active / maxCap) * 100) : 0);
+  const mood = dashData?.live_capacity?.status || (pct < 60 ? 'Comfortable' : pct < 85 ? 'Busy' : 'Near capacity');
+  const mrr = dashData?.mrr !== undefined ? Number(dashData.mrr) : 0;
+  const checkins = dashData?.today_checkins ?? 0;
   const apprList = approvals || [];
-  const apprN = apprList.filter((a) => a.status === 'Approved').length;
-  const pendN = apprList.filter((a) => a.status === 'Pending' || a.status === 'Under Review').length;
-  const totN = apprList.length || 1;
+  const apprN = dashData?.gym_registrations?.approved ?? apprList.filter((a) => a.status === 'Approved').length;
+  const pendN = dashData?.gym_registrations?.pending ?? apprList.filter((a) => a.status === 'Pending' || a.status === 'Under Review').length;
+  const totN = (apprN + pendN) || apprList.length || 1;
   const trend = '0%';
   const spark = useMemo(() => Array.from({ length: 14 }, (_, i) => ({ i, v: 0 })), []);
   const hourly = Array.from({ length: 14 }, (_, i) => ({ h: i + 6, v: 0 }));
+  const gymsTable = dashData?.gyms_table || [];
   return (
     <div>
       <PageHead
@@ -379,7 +396,84 @@ export function Dashboard() {
       </div>
       <div className="grid gap-4 lg:grid-cols-3">
         <TrendCard />
-        <FeedCard />
+        <FeedCard feedItems={dashData?.front_desk_feed} />
+      </div>
+
+      {/* Gyms Performance Overview Table */}
+      <div className="mt-6">
+        <Card className="p-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div>
+              <h2 className="text-base font-semibold text-zinc-950 dark:text-white">Gyms Performance Overview</h2>
+              <p className="text-xs text-zinc-500 mt-0.5">Live operational metrics, occupancy, and monthly revenue per gym</p>
+            </div>
+            <Btn v="outline" size="sm" onClick={() => setSection('gym')}>
+              <Icon n="Building2" size={14} />
+              Manage All Gyms
+            </Btn>
+          </div>
+          {gymsTable.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center text-zinc-400">
+              <span className="text-2xl mb-1">🏢</span>
+              <p className="text-sm font-medium text-zinc-600">No Gym Records Found</p>
+              <p className="text-xs text-zinc-400 mt-0.5">Approved and registered gyms will appear here.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-100 dark:border-zinc-800 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                    <th className="pb-3 pr-4">Gym</th>
+                    <th className="pb-3 px-4">Status</th>
+                    <th className="pb-3 px-4 text-right">Active Members</th>
+                    <th className="pb-3 px-4 text-right">Today's Scans</th>
+                    <th className="pb-3 px-4 text-right">Monthly Revenue</th>
+                    <th className="pb-3 px-4 text-center">Occupancy</th>
+                    <th className="pb-3 pl-4 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                  {gymsTable.map((g) => (
+                    <tr key={g.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-900/50 transition-colors">
+                      <td className="py-3.5 pr-4">
+                        <p className="font-semibold text-zinc-950 dark:text-white">{g.name}</p>
+                        <p className="text-xs text-zinc-500 font-mono">{g.registration_number}{g.city ? ` · ${g.city}` : ''}</p>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <Badge tone={g.status?.toLowerCase() === 'approved' ? 'green' : 'amber'}>
+                          {g.status}
+                        </Badge>
+                      </td>
+                      <td className="py-3.5 px-4 text-right tabular-nums font-medium">
+                        {g.active_members}
+                      </td>
+                      <td className="py-3.5 px-4 text-right tabular-nums font-medium">
+                        {g.today_scans}
+                      </td>
+                      <td className="py-3.5 px-4 text-right tabular-nums font-semibold text-emerald-600">
+                        ₹{Number(g.monthly_revenue).toLocaleString('en-IN')}
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                          {g.occupancy_pct}%
+                        </span>
+                      </td>
+                      <td className="py-3.5 pl-4 text-right">
+                        <Link
+                          to={`/admin/gyms/${g.id}`}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1.5 rounded-lg transition-colors"
+                        >
+                          View
+                          <Icon n="ChevronRight" size={13} />
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
       </div>
     </div>
   );

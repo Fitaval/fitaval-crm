@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ApprovalBadge } from '../../../components/ApprovalBadge';
 import { LogoTile } from '../../../components/GymVisuals';
 import { Icon } from '../../../components/Icon';
@@ -21,19 +21,28 @@ import { GymWalletTab } from './GymWalletTab';
 import { OverviewTab } from './OverviewTab';
 
 export function GymDetail({ routeGymId }) {
-  const { gymId: paramGymId } = useParams() || {};
+  const { gymId: paramGymId, subTab } = useParams() || {};
+  const navigate = useNavigate();
   const { gymId: ctxGymId, gyms, approvals, setSection, perms, toast, openGym, updateGym, client, loading } = useApp();
   const gymId = routeGymId || paramGymId || ctxGymId;
   const gym = gyms[gymId] || (gyms && Object.keys(gyms).length > 0 ? (gyms[gymId] || Object.values(gyms)[0]) : null);
-  const [tab, setTab] = useState('overview');
+  const currentGymId = gym?.id || gymId;
+
+  const validTabs = ['overview', 'staff', 'trainers', 'members', 'reviews', 'finance', 'wallet'];
+  const tab = subTab && validTabs.includes(subTab.toLowerCase()) ? subTab.toLowerCase() : 'overview';
+
   const [modal, setModal] = useState(null);
   const [review, setReview] = useState(false);
   const localVerified = useVerified(gymId);
   const verified = Boolean(gym?.is_verified ?? gym?.verified ?? localVerified);
-  const currentGymId = gym?.id || gymId;
+
+  const handleTabChange = (nextTab) => {
+    if (currentGymId) {
+      navigate(`/admin/gyms/${currentGymId}/${nextTab}`);
+    }
+  };
 
   useEffect(() => {
-    setTab('overview');
     setModal(null);
     if (currentGymId && openGym && (!gym?.members || gym.members.length === 0)) {
       openGym(currentGymId, false);
@@ -68,7 +77,7 @@ export function GymDetail({ routeGymId }) {
     photos: Array.isArray(gym.photos) ? gym.photos : [],
     logo_url: gym.logo_url || (Array.isArray(gym.photos) ? (gym.photos.find((p) => p.is_thumbnail)?.url || gym.photos.find((p) => p.is_thumbnail)?.src) : '') || '',
     hours: Array.isArray(gym.hours) ? gym.hours : [],
-    loc: gym.loc || gym.city || gym.address || 'Kerala',
+    loc: gym.loc || gym.city || gym.address || '',
     owner: ownerName,
     owner_obj: ownerObj,
     owner_email: ownerEmail,
@@ -98,11 +107,11 @@ export function GymDetail({ routeGymId }) {
   return (
     <div>
       <nav aria-label="Breadcrumb" className="mb-4 flex min-w-0 items-center gap-1.5 text-sm text-zinc-500">
-        <button onClick={() => setSection('gym')} className="shrink-0 hover:text-zinc-950">
+        <button onClick={() => navigate('/admin/gyms')} className="shrink-0 hover:text-zinc-950">
           Gym Management
         </button>
         <Icon n="ChevronRight" size={14} className="shrink-0" />
-        <button onClick={() => setSection('gym')} className="shrink-0 hover:text-zinc-950">
+        <button onClick={() => navigate('/admin/gyms')} className="shrink-0 hover:text-zinc-950">
           All Gyms
         </button>
         <Icon n="ChevronRight" size={14} className="shrink-0" />
@@ -110,7 +119,7 @@ export function GymDetail({ routeGymId }) {
       </nav>
       <Card className="mb-4 p-5 sm:p-6">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <Btn size="sm" v="outline" onClick={() => setSection('gym')}>
+          <Btn size="sm" v="outline" onClick={() => navigate('/admin/gyms')}>
             <Icon n="ArrowLeft" size={14} />
             Back to all gyms
           </Btn>
@@ -168,7 +177,7 @@ export function GymDetail({ routeGymId }) {
             <span className="text-zinc-300">·</span>Owner {g.owner}
           </p>
           <button
-            onClick={() => setTab('reviews')}
+            onClick={() => handleTabChange('reviews')}
             className="mt-2 inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-sm hover:bg-zinc-100"
             aria-label="View reviews"
           >
@@ -184,7 +193,7 @@ export function GymDetail({ routeGymId }) {
             ].map(([id, l, n, ic]) => (
               <button
                 key={id}
-                onClick={() => setTab(id)}
+                onClick={() => handleTabChange(id)}
                 className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3.5 py-1.5 text-sm hover:border-emerald-300 hover:bg-emerald-50"
               >
                 <Icon n={ic} size={14} className="text-emerald-600" />
@@ -196,7 +205,7 @@ export function GymDetail({ routeGymId }) {
         </div>
       </Card>
       <div className="mb-5">
-        <Tabs tabs={tabs} value={tab} onChange={setTab} />
+        <Tabs tabs={tabs} value={tab} onChange={handleTabChange} />
       </div>
       {tab === 'overview' && <OverviewTab g={g} edit={edit} setModal={setModal} />}
       {tab === 'staff' && <GymStaffTab g={g} />}

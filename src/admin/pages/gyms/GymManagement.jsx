@@ -402,7 +402,7 @@ export function GymManagement() {
       ...a,
       id: a.id || a.registration_number,
       name: a.name || a.gym_name || 'Gym',
-      loc: a.loc || a.city || a.address || 'Kerala',
+      loc: a.loc || a.city || a.address || '',
       owner: a.owner || a.owner_name || 'Gym Owner',
       email: a.email || a.owner_email || '',
       phone: a.phone || a.owner_phone || '',

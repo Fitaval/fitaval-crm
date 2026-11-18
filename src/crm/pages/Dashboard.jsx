@@ -69,18 +69,6 @@ export default function Dashboard() {
   }, []);
 
   const stats = useMemo(() => {
-    if (dashboardData) {
-      return {
-        total: Number(dashboardData.total_members ?? members.length),
-        active: Number(dashboardData.active_members ?? 0),
-        expiring: Number(dashboardData.expiring_members ?? 0),
-        inactive: Number(dashboardData.inactive_members ?? 0),
-        income: Number(dashboardData.monthly_income ?? 0),
-        expense: Number(dashboardData.monthly_expense ?? 0),
-        net: Number(dashboardData.net_profit ?? 0),
-        dailyIncome: Number(dashboardData.today_income ?? 0),
-      };
-    }
     const today = new Date();
     const soon = addDays(today, 7);
     const active = members.filter(
@@ -111,7 +99,7 @@ export default function Dashboard() {
       .filter((t) => t.type === "income")
       .reduce((s, t) => s + (Number(t.amount) || 0), 0);
 
-    return {
+    const fallbackStats = {
       total: members.length,
       active: active.length,
       expiring: expiring.length,
@@ -121,19 +109,45 @@ export default function Dashboard() {
       net: income - expense,
       dailyIncome,
     };
+
+    if (dashboardData) {
+      const dashIncome = Number(dashboardData.monthly_income ?? dashboardData.income ?? 0);
+      const dashExpense = Number(dashboardData.monthly_expense ?? dashboardData.expense ?? 0);
+      const dashNet = Number(dashboardData.net_profit ?? (dashIncome - dashExpense));
+      const dashDaily = Number(dashboardData.today_income ?? 0);
+      const dashTotal = Number(dashboardData.total_members ?? 0);
+      const dashActive = Number(dashboardData.active_members ?? 0);
+      const dashExpiring = Number(dashboardData.expiring_members ?? 0);
+      const dashInactive = Number(dashboardData.inactive_members ?? 0);
+
+      return {
+        total: dashTotal > 0 ? dashTotal : fallbackStats.total,
+        active: dashActive > 0 ? dashActive : (dashTotal > 0 ? dashActive : fallbackStats.active),
+        expiring: dashExpiring > 0 ? dashExpiring : fallbackStats.expiring,
+        inactive: dashInactive > 0 ? dashInactive : fallbackStats.inactive,
+        income: dashIncome > 0 ? dashIncome : fallbackStats.income,
+        expense: dashExpense > 0 ? dashExpense : fallbackStats.expense,
+        net: (dashIncome > 0 || dashExpense > 0) ? dashNet : fallbackStats.net,
+        dailyIncome: dashDaily > 0 ? dashDaily : fallbackStats.dailyIncome,
+      };
+    }
+
+    return fallbackStats;
   }, [dashboardData, members, transactions]);
 
   const walletBalance = useMemo(() => {
-    if (dashboardData && dashboardData.total_wallet !== undefined) {
-      return Number(dashboardData.total_wallet);
-    }
-    return walletTransactions.reduce((sum, t) => {
+    const fromTransactions = walletTransactions.reduce((sum, t) => {
       const amt = Number(t.amount) || 0;
       if (t.type === "credit") return sum + amt;
       if (t.type === "debit" || t.type === "withdrawal")
         return sum - amt;
       return sum;
     }, 0);
+
+    if (dashboardData && dashboardData.total_wallet !== undefined && Number(dashboardData.total_wallet) > 0) {
+      return Number(dashboardData.total_wallet);
+    }
+    return fromTransactions;
   }, [dashboardData, walletTransactions]);
 
   const chartData = useMemo(() => {

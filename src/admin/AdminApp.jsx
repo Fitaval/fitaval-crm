@@ -147,7 +147,7 @@ function AdminAppContent() {
               services: Array.isArray(g.services) ? g.services : [],
               photos: Array.isArray(g.photos) ? g.photos : [],
               hours: Array.isArray(g.hours) ? g.hours : [],
-              loc: g.loc || g.city || g.address || 'Kerala',
+              loc: g.loc || g.city || g.address || '',
               owner: typeof g.owner === 'object' ? (g.owner?.name || 'Gym Owner') : (g.owner || 'Gym Owner'),
               owner_obj: typeof g.owner === 'object' ? g.owner : null,
               email: g.email || g.contact_email || (typeof g.owner === 'object' ? g.owner?.email : '') || '',
@@ -193,7 +193,7 @@ function AdminAppContent() {
             registration_number: regCode,
             reg_code: regCode,
             name: a.name || a.gym_name || 'Gym',
-            loc: a.loc || a.city || a.address || 'Kerala',
+            loc: a.loc || a.city || a.address || '',
             owner: a.owner || a.owner_name || 'Gym Owner',
             email: a.email || a.owner_email || (typeof a.owner === 'object' ? a.owner?.email : '') || '',
             phone: a.phone || a.owner_phone || (typeof a.owner === 'object' ? a.owner?.phone : '') || '',
@@ -469,6 +469,7 @@ function AdminAppContent() {
               <Route path="/admin/gyms" element={<GymManagement />} />
               <Route path="/admin/gym" element={<Navigate to="/admin/gyms" replace />} />
               <Route path="/admin/gyms/:gymId" element={<GymDetail />} />
+              <Route path="/admin/gyms/:gymId/:subTab" element={<GymDetail />} />
               <Route path="/admin/plans" element={<SubscriptionPlans />} />
               <Route path="/admin/subscriptions" element={<Navigate to="/admin/plans" replace />} />
               <Route path="/admin/subscription-plans" element={<Navigate to="/admin/plans" replace />} />
