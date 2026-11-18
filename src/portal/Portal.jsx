@@ -179,7 +179,8 @@ export default function Portal() {
         .get('/auth/me/')
         .then((me) => {
           if (!isMounted) return;
-          const resolvedRole = me.is_super_admin ? 'admin' : (me.role?.includes('admin') ? 'admin' : 'crm');
+          const data = me?.data || me;
+          const resolvedRole = (data?.is_super_admin || data?.role === 'admin' || data?.role?.includes('admin')) ? 'admin' : 'crm';
           if (current.role !== resolvedRole) {
             tokenManager.setSession({ ...current, role: resolvedRole });
             setSession(getSession());
