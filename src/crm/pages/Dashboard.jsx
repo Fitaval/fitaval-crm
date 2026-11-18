@@ -75,8 +75,12 @@ export default function Dashboard() {
       (m) => m.status === "active" && isAfter(new Date(m.expiry_date || today), today)
     );
     const expiring = members.filter((m) => {
-      const exp = new Date(m.expiry_date || today);
-      return isAfter(exp, today) && isBefore(exp, soon);
+      if (m.status === "expiring") return true;
+      if (!m.expiry_date) return false;
+      const exp = new Date(m.expiry_date);
+      const start = m.start_date ? new Date(m.start_date) : today;
+      const totalDays = Math.max(1, differenceInDays(exp, start) + 1);
+      return totalDays > 7 && isAfter(exp, today) && isBefore(exp, soon);
     });
     const inactive = members.filter(
       (m) =>
@@ -123,8 +127,8 @@ export default function Dashboard() {
       return {
         total: dashTotal > 0 ? dashTotal : fallbackStats.total,
         active: dashActive > 0 ? dashActive : (dashTotal > 0 ? dashActive : fallbackStats.active),
-        expiring: dashExpiring > 0 ? dashExpiring : fallbackStats.expiring,
-        inactive: dashInactive > 0 ? dashInactive : fallbackStats.inactive,
+        expiring: dashboardData.expiring_members !== undefined ? dashExpiring : fallbackStats.expiring,
+        inactive: dashboardData.inactive_members !== undefined ? dashInactive : fallbackStats.inactive,
         income: dashIncome > 0 ? dashIncome : fallbackStats.income,
         expense: dashExpense > 0 ? dashExpense : fallbackStats.expense,
         net: (dashIncome > 0 || dashExpense > 0) ? dashNet : fallbackStats.net,

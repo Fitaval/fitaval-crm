@@ -1,5 +1,7 @@
 // Admin light/dark theme. Same palette as the CRM; the CRM's own theme key is kept separate (fitaval_theme).
 import { useEffect, useState } from 'react';
+import { httpClient } from '../../shared/api/httpClient';
+import { tokenManager } from '../../shared/auth/tokenManager';
 
 const KEY = 'fitaval_admin_theme';
 
@@ -11,6 +13,31 @@ export function useAdminTheme() {
       return 'light';
     }
   });
+
+  // Sync theme with backend if logged in
+  useEffect(() => {
+    const session = tokenManager.getSession();
+    if (session?.token) {
+      httpClient
+        .get('/auth/user/settings/')
+        .then((res) => {
+          const dbTheme = res?.theme || res?.data?.theme;
+          if (dbTheme === 'dark' || dbTheme === 'light') {
+            setTheme((curr) => {
+              if (curr !== dbTheme) {
+                try {
+                  localStorage.setItem(KEY, dbTheme);
+                } catch {}
+                return dbTheme;
+              }
+              return curr;
+            });
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
+
   useEffect(() => {
     const root = document.documentElement;
     root.classList.toggle('dark', theme === 'dark');
@@ -21,7 +48,21 @@ export function useAdminTheme() {
     }
     return () => root.classList.remove('dark'); // do not leak into the CRM
   }, [theme]);
-  return { theme, dark: theme === 'dark', toggleTheme: () => setTheme((t) => (t === 'dark' ? 'light' : 'dark')) };
+
+  const toggleTheme = () => {
+    setTheme((t) => {
+      const next = t === 'dark' ? 'light' : 'dark';
+      const session = tokenManager.getSession();
+      if (session?.token) {
+        httpClient.patch('/auth/user/settings/', { theme: next }).catch(() => {
+          httpClient.patch('/auth/me/', { theme: next }).catch(() => {});
+        });
+      }
+      return next;
+    });
+  };
+
+  return { theme, dark: theme === 'dark', toggleTheme };
 }
 
 /** Hex values for chart libraries / SVG attributes (they cannot read CSS variables). */

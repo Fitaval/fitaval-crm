@@ -108,15 +108,28 @@ export function ReviewModal({ g, onClose, onDone }) {
   };
 
   const approve = async () => {
+    if (verified < DOCS.length) {
+      toast({
+        title: 'Documents Required',
+        desc: `All ${DOCS.length} documents must be submitted and verified before approval.`,
+        variant: 'destructive',
+      });
+      return;
+    }
     try {
       await adminClient.approvals.approve(g.id, { internal_note: note, note, documents: docs });
+      setApprovals((a) => a.map((x) => (x.id === g.id ? { ...x, status: 'Approved', internal_note: note, documents: docs } : x)));
+      setApprovedN((n) => n + 1);
+      addAudit('UPDATE', 'gyms.Gym', g.id, { status: st }, { status: 'APPROVED', documents_verified: verified });
+      finish(g.name + ' approved', 'The gym is now active and the owner has been notified.', true);
     } catch (e) {
       console.error('Approve failed:', e);
+      toast({
+        title: 'Approval failed',
+        desc: e?.message || 'Failed to approve gym.',
+        variant: 'destructive',
+      });
     }
-    setApprovals((a) => a.map((x) => (x.id === g.id ? { ...x, status: 'Approved', internal_note: note, documents: docs } : x)));
-    setApprovedN((n) => n + 1);
-    addAudit('UPDATE', 'gyms.Gym', g.id, { status: st }, { status: 'APPROVED', documents_verified: verified });
-    finish(g.name + ' approved', 'The gym is now active and the owner has been notified.', true);
   };
   const startReview = async () => {
     try {
@@ -149,16 +162,23 @@ export function ReviewModal({ g, onClose, onDone }) {
       footer={
         <>
           <Btn onClick={onClose}>Close</Btn>
-          {perms.editGym && !rejecting && <Btn onClick={() => setRejecting(true)}>Reject</Btn>}
-          {perms.editGym && g.status === 'Pending' && (
+          {perms.editGym && g.status !== 'Approved' && !rejecting && (
+            <Btn onClick={() => setRejecting(true)}>Reject</Btn>
+          )}
+          {perms.editGym && g.status === 'Pending' && !rejecting && (
             <Btn v="soft" onClick={startReview}>
               Start review
             </Btn>
           )}
-          {perms.editGym && (
+          {perms.editGym && g.status !== 'Approved' && (
             <Btn v="primary" disabled={verified < DOCS.length || rejecting} onClick={approve}>
               Approve gym
             </Btn>
+          )}
+          {g.status === 'Approved' && (
+            <span className="text-xs font-medium text-emerald-600 self-center px-2 py-1 bg-emerald-50 rounded">
+              Gym Approved
+            </span>
           )}
         </>
       }

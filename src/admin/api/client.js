@@ -45,7 +45,7 @@ export const adminClient = {
     },
 
     async verify(id, verified) {
-      return apiRequest(`/admin/gyms/${id}/verify`, {
+      return apiRequest(`/admin/gyms/${id}/verify/`, {
         method: 'POST',
         body: JSON.stringify({ verified }),
       });

@@ -171,10 +171,11 @@ export default function Members() {
         }
 
         const today = new Date();
+        const planDays = Number(plan.duration_days) || (isDaily ? 1 : 30);
         const computedStatus =
           new Date(formattedEnd) < today
             ? "inactive"
-            : addDays(new Date(formattedEnd), -7) < today
+            : planDays > 7 && addDays(new Date(formattedEnd), -7) < today
             ? "expiring"
             : (form.status || "active");
 

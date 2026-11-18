@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { httpClient } from "../../shared/api/httpClient";
+import { tokenManager } from "../../shared/auth/tokenManager";
 
 const THEME_STORAGE_KEY = "fitaval_theme";
 
@@ -20,6 +22,30 @@ export function ThemeProvider({ children }) {
   });
 
   const [resolvedTheme, setResolvedTheme] = useState("light");
+
+  // Sync theme with backend if logged in
+  useEffect(() => {
+    const session = tokenManager.getSession();
+    if (session?.token) {
+      httpClient
+        .get("/auth/user/settings/")
+        .then((res) => {
+          const dbTheme = res?.theme || res?.data?.theme;
+          if (dbTheme && (dbTheme === "dark" || dbTheme === "light" || dbTheme === "system")) {
+            setThemeState((current) => {
+              if (current !== dbTheme) {
+                try {
+                  localStorage.setItem(THEME_STORAGE_KEY, dbTheme);
+                } catch (e) {}
+                return dbTheme;
+              }
+              return current;
+            });
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -59,6 +85,13 @@ export function ThemeProvider({ children }) {
       localStorage.setItem(THEME_STORAGE_KEY, newTheme);
     } catch (e) {
       console.error("Failed to persist theme", e);
+    }
+
+    const session = tokenManager.getSession();
+    if (session?.token) {
+      httpClient.patch("/auth/user/settings/", { theme: newTheme }).catch(() => {
+        httpClient.patch("/auth/me/", { theme: newTheme }).catch(() => {});
+      });
     }
   };
 
