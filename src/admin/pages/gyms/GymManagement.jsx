@@ -350,8 +350,8 @@ export function GymManagement() {
     return s === 'pending' || s === 'underreview';
   };
   const n = (v) => v.toLocaleString('en-US');
-  const totalGyms = Math.max(Object.keys(gyms || {}).length, 1);
-  const activeGyms = Math.max(Object.values(gyms || {}).filter((g) => g.status === 'approved' || g.is_open).length, 1);
+  const totalGyms = Object.keys(gyms || {}).length;
+  const activeGyms = Object.values(gyms || {}).filter((g) => g.status === 'approved' || g.is_open).length;
   const kpis = [
     { label: 'Total Gyms', value: n(totalGyms), icon: 'Building2', trend: 'Live', period: 'Real-time' },
     { label: 'Active Gyms', value: n(activeGyms), icon: 'CheckCircle2', trend: 'Live', period: 'Real-time' },

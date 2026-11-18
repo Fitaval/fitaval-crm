@@ -8,7 +8,7 @@ import { TODAY } from '../lib/utils';
 export function Header({ onMenu, onBell, collapsed, onCollapse }) {
   const { section, roleObj, alerts, dark, toggleTheme, gyms } = useApp();
   const unread = alerts.filter((a) => !a.read).length;
-  const liveGymCount = Object.keys(gyms || {}).length || 1;
+  const liveGymCount = Object.keys(gyms || {}).length;
   return (
     <header className="sticky z-30 border-b border-zinc-200 bg-white" style={{ top: 'env(safe-area-inset-top,0px)' }}>
       <div className="gutter flex items-center gap-3 py-3">
