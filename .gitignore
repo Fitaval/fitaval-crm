@@ -13,8 +13,7 @@ build/
 .turbo/
 
 # Environment files & Secrets (local overrides only)
-.env.local
-.env.*.local
+.env
 
 # Logs
 logs/

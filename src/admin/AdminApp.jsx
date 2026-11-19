@@ -19,8 +19,9 @@ import { GymManagement } from './pages/gyms/GymManagement';
 import { SubscriptionPlans } from './pages/gyms/SubscriptionPlans';
 import { GymDetail } from './pages/gyms/detail/GymDetail';
 import { UserManagement } from './pages/users/UserManagement';
-import { logout, getSession } from '../portal/session';
+import { logout, getSession, startSession } from '../portal/session';
 import { adminClient } from './api/client';
+import { httpClient } from '../shared/api/httpClient';
 import { setVerified } from '../shared/verified';
 
 function AdminAppContent() {
@@ -67,6 +68,16 @@ function AdminAppContent() {
   const [scanOpen, setScanOpen] = useState(false);
   const [bell, setBell] = useState(false);
 
+  const activeSession = getSession();
+  const [adminName, setAdminName] = useState(() => {
+    return (
+      activeSession?.user?.full_name ||
+      activeSession?.user?.name ||
+      activeSession?.name ||
+      (activeSession?.email ? activeSession.email.split('@')[0] : 'Super Admin')
+    );
+  });
+
   // Live state from backend
   const [members, setMembers] = useState([]);
   const [audit, setAudit] = useState([]);
@@ -101,7 +112,7 @@ function AdminAppContent() {
     async function loadAdminBackendData() {
       try {
         setLoading(true);
-        const [gymsRes, approvalsRes, usersRes, auditRes] = await Promise.all([
+        const [gymsRes, approvalsRes, usersRes, auditRes, meRes] = await Promise.all([
           adminClient.gyms.list().catch((e) => {
             console.error('Failed to load gyms:', e);
             return { data: [] };
@@ -118,9 +129,19 @@ function AdminAppContent() {
             console.error('Failed to load audit logs:', e);
             return { data: [] };
           }),
+          httpClient.get('/auth/me/').catch(() => null),
         ]);
 
         if (!isMounted) return;
+
+        if (meRes) {
+          const fetchedName = meRes.full_name || meRes.name || meRes?.data?.full_name || meRes?.data?.name;
+          if (fetchedName) {
+            setAdminName(fetchedName);
+            const cur = getSession() || {};
+            startSession({ ...cur, user: { ...(cur.user || {}), ...meRes, full_name: fetchedName, name: fetchedName } });
+          }
+        }
 
         const rawGyms = Array.isArray(gymsRes) ? gymsRes : (gymsRes?.data || gymsRes?.results || []);
         if (rawGyms.length > 0) {
@@ -273,7 +294,14 @@ function AdminAppContent() {
     };
   }, []);
 
-  const roleObj = ROLES.find((r) => r.id === role) || ROLES[0];
+  const roleObj = useMemo(() => {
+    const base = ROLES.find((r) => r.id === role) || ROLES[0];
+    return {
+      ...base,
+      user: adminName,
+    };
+  }, [role, adminName]);
+
   const perms = useMemo(() => permsFor(role), [role]);
 
   const toast = (t) => {
@@ -486,6 +514,8 @@ function AdminAppContent() {
     feed,
     recordScan,
     startExport,
+    adminName,
+    setAdminName,
     client: adminClient,
     adminClient,
     loading,

@@ -5,12 +5,26 @@ import { signUp, verifySignUp, resendSignUpOtp } from './session';
 export default function Register() {
   const [gymName, setGymName] = useState('');
   const [ownerName, setOwnerName] = useState('');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => {
+    try {
+      const pending = JSON.parse(sessionStorage.getItem('fitaval_pending_signup') || '{}');
+      return pending.email || '';
+    } catch {
+      return '';
+    }
+  });
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [code, setCode] = useState('');
-  const [step, setStep] = useState('form'); // form | otp
+  const [step, setStep] = useState(() => {
+    try {
+      const pending = JSON.parse(sessionStorage.getItem('fitaval_pending_signup') || '{}');
+      return pending.email ? 'otp' : 'form';
+    } catch {
+      return 'form';
+    }
+  });
   const [error, setError] = useState('');
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
@@ -45,7 +59,20 @@ export default function Register() {
       <AuthShell
         title="Verify Gym Owner Account"
         sub={`We sent a 6-digit confirmation code to ${email}.`}
-        footer={<>Wrong email? <a href="/register">Start again</a></>}
+        footer={
+          <>
+            Wrong email?{' '}
+            <a
+              href="/register"
+              onClick={() => {
+                sessionStorage.removeItem('fitaval_pending_signup');
+                setStep('form');
+              }}
+            >
+              Start again
+            </a>
+          </>
+        }
       >
         <form onSubmit={verify} noValidate>
           <label htmlFor="pt-otp">Verification code</label>

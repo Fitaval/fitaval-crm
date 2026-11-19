@@ -11,34 +11,32 @@ export function SessionsTab() {
   const [confirm, setConfirm] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    let mounted = true;
-    const fetchSessions = async () => {
-      try {
-        setLoading(true);
-        const res = await httpClient.get('/auth/sessions/');
-        if (mounted && res && Array.isArray(res.sessions) && res.sessions.length > 0) {
-          setSessions(res.sessions);
-        }
-      } catch (err) {
-        console.warn('Could not fetch active sessions from backend:', err);
-      } finally {
-        if (mounted) setLoading(false);
+  const fetchSessions = async () => {
+    try {
+      setLoading(true);
+      const res = await httpClient.get('/auth/sessions/');
+      if (res && Array.isArray(res.sessions)) {
+        setSessions(res.sessions);
       }
-    };
+    } catch (err) {
+      console.warn('Could not fetch active sessions from backend:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchSessions();
-    return () => {
-      mounted = false;
-    };
-  }, [setSessions]);
+  }, []);
 
   const revoke = async (s) => {
     try {
       await httpClient.post('/auth/sessions/', { session_id: s.id });
+      await fetchSessions();
     } catch (err) {
       console.warn('Backend session revoke failed:', err);
+      setSessions((ss) => ss.filter((x) => x.id !== s.id));
     }
-    setSessions((ss) => ss.filter((x) => x.id !== s.id));
     addAudit(
       'SECURITY',
       'accounts.Session',
@@ -52,11 +50,13 @@ export function SessionsTab() {
 
   const revokeAllOthers = async () => {
     try {
-      await httpClient.post('/auth/sessions/', { action: 'revoke_all_others' });
+      const current = sessions.find((x) => x.current);
+      await httpClient.post('/auth/sessions/', { action: 'revoke_all_others', session_id: current?.id });
+      await fetchSessions();
     } catch (err) {
       console.warn('Backend revoke all sessions failed:', err);
+      setSessions((ss) => ss.filter((x) => x.current));
     }
-    setSessions((ss) => ss.filter((x) => x.current));
     toast({ title: 'All other sessions revoked', desc: 'Only this device is signed in.' });
   };
   return (

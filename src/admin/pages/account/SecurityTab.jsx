@@ -12,7 +12,7 @@ import { httpClient } from '../../../shared/api/httpClient';
 import { cx } from '../../lib/utils';
 
 export function SecurityTab() {
-  const { session, roleObj, role, toast, addAudit, sessions, setSessions } = useApp();
+  const { session, roleObj, role, toast, addAudit, sessions, setSessions, setAdminName } = useApp();
   const currentSession = session || getSession() || {};
   const currentEmail = currentSession?.user?.email || currentSession?.email || '';
   const currentName = currentSession?.user?.full_name || currentSession?.user?.name || currentSession?.name || (currentEmail ? currentEmail.split('@')[0] : (roleObj?.user || 'Super Admin'));
@@ -56,6 +56,9 @@ export function SecurityTab() {
         phone: p.phone,
       };
       startSession({ ...existing, user: updatedUser });
+      if (typeof setAdminName === 'function') {
+        setAdminName(p.name);
+      }
 
       addAudit('UPDATE', 'accounts.User', existing?.user?.id || 'usr-current', { name: roleObj.user }, { name: p.name, phone: p.phone });
       toast({ title: 'Profile saved', desc: 'Your full name and phone number have been updated successfully.' });

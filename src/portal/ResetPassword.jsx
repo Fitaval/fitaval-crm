@@ -3,7 +3,9 @@ import AuthShell, { PasswordField } from './AuthShell';
 import { httpClient } from '../shared/api/httpClient';
 
 export default function ResetPassword() {
-  const token = new URLSearchParams(window.location.search).get('token');
+  const searchParams = new URLSearchParams(window.location.search);
+  const token = searchParams.get('token');
+  const uid = searchParams.get('uid');
   const [pw, setPw] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
@@ -19,7 +21,7 @@ export default function ResetPassword() {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (pw.length < 6) return setError('Password must be at least 6 characters.');
+    if (pw.length < 8) return setError('Password must be at least 8 characters.');
     if (pw !== confirm) return setError('Passwords do not match.');
     setLoading(true);
     setError('');
@@ -27,7 +29,7 @@ export default function ResetPassword() {
     try {
       await httpClient.post(
         '/auth/password/reset/confirm/',
-        { token, new_password: pw, password: pw },
+        { uid: uid || '', token, new_password: pw, password: pw },
         { skipAuth: true, retryOn401: false }
       );
       window.history.pushState(null, '', '/login?reset=success');
@@ -42,7 +44,7 @@ export default function ResetPassword() {
   return (
     <AuthShell title="New password" sub="Enter your new password below." footer={<a href="/login">← Back to sign in</a>}>
       <form onSubmit={submit} noValidate>
-        <PasswordField id="pt-pass" label="New password" autoComplete="new-password" placeholder="At least 6 characters" value={pw}
+        <PasswordField id="pt-pass" label="New password" autoComplete="new-password" placeholder="At least 8 characters" value={pw}
           onChange={(e) => { setPw(e.target.value); setError(''); }} />
         <PasswordField id="pt-confirm" label="Confirm password" autoComplete="new-password" placeholder="Re-enter your password" value={confirm}
           onChange={(e) => { setConfirm(e.target.value); setError(''); }} />
