@@ -27,7 +27,7 @@ import {
   YAxis,
   CartesianGrid,
 } from "recharts";
-import { format, subDays, isAfter, isBefore, addDays } from "date-fns";
+import { format, subDays, isAfter, isBefore, addDays, differenceInDays } from "date-fns";
 
 export default function Dashboard() {
   const navigate = useNavigate();

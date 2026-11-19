@@ -369,10 +369,58 @@ function AdminAppContent() {
     });
 
     try {
-      await adminClient.users.export({ branch: bf });
+      const res = await adminClient.users.export({ branch: bf });
+
+      let downloaded = false;
+      if (res && res.download_url) {
+        try {
+          const downloadUrl = res.download_url.startsWith('http')
+            ? res.download_url
+            : `${API_BASE.replace('/api/v1', '')}${res.download_url}`;
+          const a = document.createElement('a');
+          a.href = downloadUrl;
+          a.setAttribute('download', `members_export_${new Date().toISOString().slice(0, 10)}.csv`);
+          a.target = '_blank';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          downloaded = true;
+        } catch (downloadErr) {
+          console.warn('Failed to trigger download via link, falling back to blob:', downloadErr);
+        }
+      }
+
+      // Client-side fallback if download_url failed or file not accessible
+      if (!downloaded && Array.isArray(members) && members.length > 0) {
+        const headers = ['ID', 'Name', 'Email', 'Phone', 'Status', 'Branch', 'Since'];
+        const csvRows = [
+          headers.join(','),
+          ...members.map((m) =>
+            [
+              `"${m.id || ''}"`,
+              `"${(m.name || '').replace(/"/g, '""')}"`,
+              `"${(m.email || '').replace(/"/g, '""')}"`,
+              `"${(m.phone || '').replace(/"/g, '""')}"`,
+              `"${m.status || 'Active'}"`,
+              `"${m.branch || 'main'}"`,
+              `"${m.since || ''}"`,
+            ].join(',')
+          ),
+        ];
+        const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.setAttribute('download', `members_export_${new Date().toISOString().slice(0, 10)}.csv`);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+
       updateToast(id, {
         title: 'Export ready',
-        desc: n + ' rows exported.',
+        desc: `${n || members.length} rows exported and downloaded.`,
         progress: 100,
         done: true,
       });

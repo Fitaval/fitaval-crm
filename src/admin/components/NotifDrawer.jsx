@@ -21,46 +21,19 @@ export function NotifDrawer({ onClose }) {
   const audiencesList = [
     {
       id: 'all',
-      label: '🌐 All Users (App & CRM)',
+      label: 'All users (App & CRM)',
       n: membersList.filter((m) => m.status === 'Active' || !m.status).length + gymsList.length,
     },
     {
       id: 'app_users',
-      label: '📱 App Users Only (All Mobile Members)',
+      label: 'All App Users Only',
       n: membersList.filter((m) => m.status === 'Active' || !m.status).length,
     },
     {
       id: 'crm_users',
-      label: '🏢 CRM Users Only (All Gym Portals)',
+      label: 'All CRM Users Only',
       n: gymsList.length,
     },
-    {
-      id: 'expiring',
-      label: '⏰ Expiring App Members',
-      n: membersList.filter((m) => m.status === 'Expiring' || m.status === 'Expired').length,
-    },
-    ...gymsList.flatMap((g) => {
-      const gId = String(g.id || g.gym_id || g.name);
-      const gName = g.name || g.gym_name || 'Gym';
-      const gMembers = membersList.filter((m) => m.gym_id === g.id || m.gym === g.id || m.gym === g.name).length;
-      return [
-        {
-          id: `gym_all:${gId}`,
-          label: `🏋️‍♂️ ${gName} — Both (Members & CRM)`,
-          n: gMembers + 1,
-        },
-        {
-          id: `gym_app:${gId}`,
-          label: `📱 ${gName} — App Members Only`,
-          n: gMembers,
-        },
-        {
-          id: `gym_crm:${gId}`,
-          label: `🏢 ${gName} — CRM Portal Only`,
-          n: 1,
-        },
-      ];
-    }),
   ];
 
   const LINK_OPTIONS = [

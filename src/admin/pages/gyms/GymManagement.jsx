@@ -40,10 +40,25 @@ export function ReviewModal({ g, onClose, onDone }) {
   });
   const [uploading, setUploading] = useState({});
   const [note, setNote] = useState(() => g.internal_note || g.note || '');
+  const [noteSaving, setNoteSaving] = useState(false);
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState('');
   const verified = DOCS.filter((d, i) => Boolean(docs[d]) || checks[i]).length;
   const st = g.status.toUpperCase().replace(' ', '_');
+
+  const saveNote = async () => {
+    try {
+      setNoteSaving(true);
+      await adminClient.gyms.update(g.id, { internal_note: note });
+      setApprovals((a) => a.map((x) => (x.id === g.id ? { ...x, internal_note: note } : x)));
+      toast({ title: 'Note saved', desc: 'Internal note updated successfully.' });
+    } catch (e) {
+      console.error('Save note failed:', e);
+      toast({ title: 'Failed to save note', desc: e.message || 'Error updating note', variant: 'destructive' });
+    } finally {
+      setNoteSaving(false);
+    }
+  };
   const finish = (title, desc, leave) => {
     toast({ title, desc });
     onClose();
@@ -108,14 +123,6 @@ export function ReviewModal({ g, onClose, onDone }) {
   };
 
   const approve = async () => {
-    if (verified < DOCS.length) {
-      toast({
-        title: 'Documents Required',
-        desc: `All ${DOCS.length} documents must be submitted and verified before approval.`,
-        variant: 'destructive',
-      });
-      return;
-    }
     try {
       await adminClient.approvals.approve(g.id, { internal_note: note, note, documents: docs });
       setApprovals((a) => a.map((x) => (x.id === g.id ? { ...x, status: 'Approved', internal_note: note, documents: docs } : x)));
@@ -162,7 +169,7 @@ export function ReviewModal({ g, onClose, onDone }) {
       footer={
         <>
           <Btn onClick={onClose}>Close</Btn>
-          {perms.editGym && g.status !== 'Approved' && !rejecting && (
+          {perms.editGym && g.status !== 'Rejected' && !rejecting && (
             <Btn onClick={() => setRejecting(true)}>Reject</Btn>
           )}
           {perms.editGym && g.status === 'Pending' && !rejecting && (
@@ -171,7 +178,7 @@ export function ReviewModal({ g, onClose, onDone }) {
             </Btn>
           )}
           {perms.editGym && g.status !== 'Approved' && (
-            <Btn v="primary" disabled={verified < DOCS.length || rejecting} onClick={approve}>
+            <Btn v="primary" disabled={rejecting} onClick={approve}>
               Approve gym
             </Btn>
           )}
@@ -211,7 +218,9 @@ export function ReviewModal({ g, onClose, onDone }) {
       </dl>
       <div className="mt-5">
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-sm font-semibold">Documents</p>
+          <p className="text-sm font-semibold">
+            Documents <span className="text-xs font-normal text-zinc-400">(Optional)</span>
+          </p>
           <span className="text-xs tabular-nums text-zinc-500">
             {verified} of {DOCS.length} verified
           </span>
@@ -325,6 +334,18 @@ export function ReviewModal({ g, onClose, onDone }) {
           onChange={(e) => setNote(e.target.value)}
           placeholder="Visible to admins only"
         ></textarea>
+        {perms.editGym && (
+          <div className="mt-2 flex justify-end">
+            <Btn
+              size="sm"
+              v="outline"
+              disabled={noteSaving || note === (g.internal_note || g.note || '')}
+              onClick={saveNote}
+            >
+              {noteSaving ? 'Saving note...' : 'Save Note'}
+            </Btn>
+          </div>
+        )}
       </Field>
       {rejecting && (
         <div className="mt-4 space-y-3 rounded-lg border-2 border-zinc-950 p-3">

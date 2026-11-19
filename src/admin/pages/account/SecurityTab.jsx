@@ -7,14 +7,15 @@ import { Card } from '../../components/ui/Card';
 import { Field } from '../../components/ui/Field';
 import { inputCls } from '../../components/ui/styles';
 import { useApp } from '../../context/AppContext';
-import { getSession } from '../../../portal/session';
+import { getSession, startSession } from '../../../portal/session';
+import { httpClient } from '../../../shared/api/httpClient';
 import { cx } from '../../lib/utils';
 
 export function SecurityTab() {
   const { session, roleObj, role, toast, addAudit, sessions, setSessions } = useApp();
   const currentSession = session || getSession() || {};
   const currentEmail = currentSession?.user?.email || currentSession?.email || '';
-  const currentName = currentSession?.user?.name || currentSession?.name || (currentEmail ? currentEmail.split('@')[0] : (roleObj?.user || 'Super Admin'));
+  const currentName = currentSession?.user?.full_name || currentSession?.user?.name || currentSession?.name || (currentEmail ? currentEmail.split('@')[0] : (roleObj?.user || 'Super Admin'));
   const currentPhone = currentSession?.user?.phone || currentSession?.phone || '';
 
   const [p, setP] = useState({
@@ -23,18 +24,49 @@ export function SecurityTab() {
     phone: currentPhone,
     title: roleObj?.label || 'Super Admin',
   });
-  useEffect(
-    () =>
-      setP({
-        name: currentName,
-        email: currentEmail,
-        phone: currentPhone,
-        title: roleObj?.label || 'Super Admin',
-      }),
-    [role, currentName, currentEmail, currentPhone, roleObj]
-  );
+
+  useEffect(() => {
+    setP({
+      name: currentName,
+      email: currentEmail,
+      phone: currentPhone,
+      title: roleObj?.label || 'Super Admin',
+    });
+  }, [role, currentName, currentEmail, currentPhone, roleObj]);
+
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [rotating, setRotating] = useState(false);
   const [pw, setPw] = useState({ cur: '', next: '', conf: '' });
   const [revoke, setRevoke] = useState(true);
+
+  const handleSaveProfile = async () => {
+    try {
+      setSavingProfile(true);
+      await httpClient.patch('/auth/me/', {
+        full_name: p.name,
+        name: p.name,
+        phone: p.phone,
+      });
+
+      const existing = getSession() || {};
+      const updatedUser = {
+        ...(existing.user || {}),
+        name: p.name,
+        full_name: p.name,
+        phone: p.phone,
+      };
+      startSession({ ...existing, user: updatedUser });
+
+      addAudit('UPDATE', 'accounts.User', existing?.user?.id || 'usr-current', { name: roleObj.user }, { name: p.name, phone: p.phone });
+      toast({ title: 'Profile saved', desc: 'Your full name and phone number have been updated successfully.' });
+    } catch (err) {
+      console.error('Failed to update profile:', err);
+      toast({ title: 'Update failed', desc: err.message || 'Could not update profile', variant: 'destructive' });
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
   const s = pw.next;
   let score = 0;
   if (s.length >= 10) score++;
@@ -42,25 +74,44 @@ export function SecurityTab() {
   if (/\d/.test(s)) score++;
   if (/[^A-Za-z0-9]/.test(s)) score++;
   const label = ['Too short', 'Weak', 'Fair', 'Good', 'Strong'][score];
-  const ok = pw.cur && pw.next.length >= 10 && pw.next === pw.conf && score >= 3;
-  const submit = (e) => {
+  const ok = pw.cur && pw.next.length >= 8 && pw.next === pw.conf;
+
+  const submit = async (e) => {
     e.preventDefault();
     if (!ok) return;
-    const before = sessions.length;
-    if (revoke) setSessions((ss) => ss.filter((x) => x.current));
-    addAudit(
-      'SECURITY',
-      'accounts.User',
-      'usr-0007',
-      { active_jti_count: before },
-      { password_rotated_at: new Date().toISOString().slice(0, 19), active_jti_count: revoke ? 1 : before }
-    );
-    toast({
-      title: 'Password updated',
-      desc: revoke ? before - 1 + ' other device sessions were signed out.' : 'Other device sessions stay signed in.',
-    });
-    setPw({ cur: '', next: '', conf: '' });
+    try {
+      setRotating(true);
+      await httpClient.post('/auth/password/change/', {
+        current_password: pw.cur,
+        new_password: pw.next,
+        revoke_others: revoke,
+      });
+      const before = sessions.length;
+      if (revoke) setSessions((ss) => ss.filter((x) => x.current));
+      addAudit(
+        'SECURITY',
+        'accounts.User',
+        'usr-current',
+        { active_jti_count: before },
+        { password_rotated_at: new Date().toISOString().slice(0, 19), active_jti_count: revoke ? 1 : before }
+      );
+      toast({
+        title: 'Password updated',
+        desc: revoke ? (before > 1 ? `${before - 1} other device session(s) were signed out.` : 'Password changed successfully.') : 'Password updated. Other sessions remain active.',
+      });
+      setPw({ cur: '', next: '', conf: '' });
+    } catch (err) {
+      console.error('Password change error:', err);
+      toast({
+        title: 'Password change failed',
+        desc: err.message || 'Incorrect current password or invalid new password.',
+        variant: 'destructive',
+      });
+    } finally {
+      setRotating(false);
+    }
   };
+
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <Card className="p-5">
@@ -84,23 +135,26 @@ export function SecurityTab() {
               className={inputCls}
               value={p.name}
               onChange={(e) => setP({ ...p, name: e.target.value })}
+              placeholder="e.g. John Doe"
             />
           </Field>
-          <Field label="Designation" id="pf-title">
+          <Field label="Designation (View only)" id="pf-title">
             <input
               id="pf-title"
-              className={inputCls}
+              disabled
+              readOnly
+              className={cx(inputCls, 'bg-zinc-100 text-zinc-500 cursor-not-allowed border-zinc-200')}
               value={p.title}
-              onChange={(e) => setP({ ...p, title: e.target.value })}
             />
           </Field>
-          <Field label="Work email" id="pf-email">
+          <Field label="Work email (View only)" id="pf-email">
             <input
               id="pf-email"
               type="email"
-              className={inputCls}
+              disabled
+              readOnly
+              className={cx(inputCls, 'bg-zinc-100 text-zinc-500 cursor-not-allowed border-zinc-200')}
               value={p.email}
-              onChange={(e) => setP({ ...p, email: e.target.value })}
             />
           </Field>
           <Field label="Phone" id="pf-phone">
@@ -109,25 +163,24 @@ export function SecurityTab() {
               className={inputCls}
               value={p.phone}
               onChange={(e) => setP({ ...p, phone: e.target.value })}
+              placeholder="+91 98765 43210"
             />
           </Field>
         </div>
         <div className="mt-4 flex justify-end">
           <Btn
             v="primary"
-            onClick={() => {
-              addAudit('UPDATE', 'accounts.User', 'usr-0007', { name: roleObj.user }, { name: p.name, email: p.email });
-              toast({ title: 'Profile saved', desc: 'Your details are updated across branches.' });
-            }}
+            disabled={savingProfile}
+            onClick={handleSaveProfile}
           >
-            Save profile
+            {savingProfile ? 'Saving profile...' : 'Save profile'}
           </Btn>
         </div>
       </Card>
       <Card className="p-5">
         <h3 className="text-base font-semibold">Password rotation</h3>
         <p className="mt-0.5 text-sm text-zinc-500">
-          Use at least 10 characters with mixed case, a number and a symbol.
+          Use at least 8 characters with mixed case, a number and a symbol.
         </p>
         <form className="mt-4 space-y-4" onSubmit={submit}>
           <Field label="Current password" id="pw-cur">
@@ -193,9 +246,9 @@ export function SecurityTab() {
               Revoke all other active JWT device sessions upon password change
             </span>
           </label>
-          <Btn v="dark" className="w-full" type="submit" disabled={!ok}>
+          <Btn v="dark" className="w-full" type="submit" disabled={!ok || rotating}>
             <Icon n="KeyRound" size={15} className="text-emerald-400" />
-            Rotate password
+            {rotating ? 'Updating password...' : 'Rotate password'}
           </Btn>
         </form>
       </Card>

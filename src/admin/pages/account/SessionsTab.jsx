@@ -1,24 +1,63 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Icon } from '../../components/Icon';
 import { Badge } from '../../components/ui/Badge';
 import { Btn } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { useApp } from '../../context/AppContext';
+import { httpClient } from '../../../shared/api/httpClient';
 
 export function SessionsTab() {
   const { sessions, setSessions, toast, addAudit } = useApp();
   const [confirm, setConfirm] = useState(null);
-  const revoke = (s) => {
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchSessions = async () => {
+      try {
+        setLoading(true);
+        const res = await httpClient.get('/auth/sessions/');
+        if (mounted && res && Array.isArray(res.sessions) && res.sessions.length > 0) {
+          setSessions(res.sessions);
+        }
+      } catch (err) {
+        console.warn('Could not fetch active sessions from backend:', err);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+    fetchSessions();
+    return () => {
+      mounted = false;
+    };
+  }, [setSessions]);
+
+  const revoke = async (s) => {
+    try {
+      await httpClient.post('/auth/sessions/', { session_id: s.id });
+    } catch (err) {
+      console.warn('Backend session revoke failed:', err);
+    }
     setSessions((ss) => ss.filter((x) => x.id !== s.id));
     addAudit(
       'SECURITY',
       'accounts.Session',
-      'jti-' + s.jti.slice(0, 8),
+      'jti-' + (s.jti ? s.jti.slice(0, 8) : 'active'),
       { revoked: false },
       { revoked: true, reason: 'Remote sign-out' }
     );
     toast({ title: 'Session revoked', desc: s.device + ' was signed out.' });
     setConfirm(null);
+  };
+
+  const revokeAllOthers = async () => {
+    try {
+      await httpClient.post('/auth/sessions/', { action: 'revoke_all_others' });
+    } catch (err) {
+      console.warn('Backend revoke all sessions failed:', err);
+    }
+    setSessions((ss) => ss.filter((x) => x.current));
+    toast({ title: 'All other sessions revoked', desc: 'Only this device is signed in.' });
   };
   return (
     <Card className="overflow-hidden">
@@ -32,10 +71,7 @@ export function SessionsTab() {
         <Btn
           v="outline"
           disabled={sessions.length < 2}
-          onClick={() => {
-            setSessions((ss) => ss.filter((x) => x.current));
-            toast({ title: 'All other sessions revoked', desc: 'Only this device is signed in.' });
-          }}
+          onClick={revokeAllOthers}
         >
           Revoke all others
         </Btn>
