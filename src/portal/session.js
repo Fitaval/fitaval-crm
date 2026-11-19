@@ -30,13 +30,22 @@ export function startSession(session, meta = {}) {
 
 /** Signs a gym owner into the CRM */
 export function startCrmSession(user, token, meta = {}) {
+  const owner_name = user.owner_name || user.name || '';
+  const gym_name = user.gym_name || user.gymName || '';
   startSession(
     {
       role: 'crm',
       email: user.email,
-      name: user.name,
+      name: owner_name,
+      owner_name,
+      gym_name,
       token: token || tokenManager.getAccessToken(),
-      user,
+      user: {
+        ...user,
+        name: owner_name,
+        owner_name,
+        gym_name,
+      },
     },
     meta
   );
@@ -115,7 +124,11 @@ export async function logout() {
 export async function signUp(email, password, meta = {}) {
   const e = (email || '').trim().toLowerCase();
   if (!/^\S+@\S+\.\S+$/.test(e)) return { ok: false, error: 'Enter a valid email address.' };
-  if ((password || '').length < 6) return { ok: false, error: 'Password must be at least 6 characters.' };
+  if ((password || '').length < 8) return { ok: false, error: 'Password must be at least 8 characters.' };
+
+  const gym_name = (meta.gym_name || meta.gymName || '').trim() || 'Fitaval Club';
+  const owner_name = (meta.owner_name || meta.ownerName || '').trim() || e.split('@')[0];
+  const phone = (meta.phone || '').trim();
 
   try {
     await httpClient.post(
@@ -123,14 +136,14 @@ export async function signUp(email, password, meta = {}) {
       {
         email: e,
         password,
-        gym_name: meta.gymName || 'Fitaval Club',
-        full_name: meta.ownerName || e.split('@')[0],
-        phone: meta.phone || '',
+        gym_name,
+        owner_name,
+        phone,
         role: 'crm',
       },
       { skipAuth: true, retryOn401: false }
     );
-    ss()?.setItem(PENDING_KEY, JSON.stringify({ email: e, password, name: meta.ownerName, gymName: meta.gymName, phone: meta.phone || '' }));
+    ss()?.setItem(PENDING_KEY, JSON.stringify({ email: e, password, owner_name, gym_name, phone }));
     return { ok: true, email: e };
   } catch (err) {
     return { ok: false, error: err.message || 'Unable to connect to registration server.' };
@@ -161,15 +174,35 @@ export async function verifySignUp(code) {
   }
   if (!pending.email) return { ok: false, error: 'Your sign-up expired. Please start again.' };
 
+  const gym_name = pending.gym_name || pending.gymName || 'Fitaval Club';
+  const owner_name = pending.owner_name || pending.name || '';
+
   try {
     const data = await httpClient.post(
       '/auth/portal/verify-otp/',
-      { email: pending.email, otp: code, role: 'crm' },
+      {
+        email: pending.email,
+        otp: code,
+        role: 'crm',
+        gym_name,
+        owner_name,
+        phone: pending.phone || '',
+        password: pending.password,
+      },
       { skipAuth: true, retryOn401: false }
     );
     const token = data.access_token || data.access || data.token;
     const refreshToken = data.refresh_token || data.refresh;
-    const user = data.user || { name: pending.name, email: pending.email, gymName: pending.gymName };
+    const rawUser = data.user || {};
+    const resolvedOwnerName = rawUser.owner_name || rawUser.name || owner_name;
+    const resolvedGymName = rawUser.gym_name || gym_name;
+    const user = {
+      ...rawUser,
+      name: resolvedOwnerName,
+      owner_name: resolvedOwnerName,
+      gym_name: resolvedGymName,
+      email: rawUser.email || pending.email,
+    };
     ss()?.removeItem(PENDING_KEY);
     startCrmSession(user, token, { refreshToken });
     return { ok: true };

@@ -36,6 +36,7 @@ export function OverviewTab({ g }) {
   const hoursList = Array.isArray(g?.hours) ? g.hours : [];
   const photosList = Array.isArray(g?.photos) ? g.photos : [];
   const addressText = [g?.addr || g?.address, g?.loc || g?.city, g?.zip].filter(Boolean).join(', ') || 'Not set';
+  const ownerText = (typeof g?.owner === 'object' ? g?.owner?.name : g?.owner) || g?.owner_name || 'Gym Owner';
   const phoneText = g?.phone || g?.contact_phone || g?.owner_phone || 'Not set';
   const emailText = g?.email || g?.contact_email || g?.owner_email || 'Not set';
 
@@ -45,6 +46,7 @@ export function OverviewTab({ g }) {
         <Section icon="Contact" title="Contact information">
           <ul className="space-y-3">
             {[
+              ['User', 'Owner / Manager', ownerText],
               ['MapPin', 'Address', addressText],
               ['Phone', 'Phone', phoneText],
               ['Mail', 'Email', emailText],

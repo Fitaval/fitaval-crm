@@ -32,10 +32,11 @@ export default function Register() {
   const submit = async (e) => {
     e.preventDefault();
     if (!gymName.trim()) return setError('Enter your gym / fitness club name.');
-    if (!ownerName.trim()) return setError('Enter your full name.');
+    if (!ownerName.trim()) return setError('Enter owner / manager name.');
+    if (password.length < 8) return setError('Password must be at least 8 characters.');
     if (password !== confirm) return setError('Passwords do not match.');
     setLoading(true);
-    const res = await signUp(email, password, { gymName: gymName.trim(), ownerName: ownerName.trim(), phone: phone.trim() });
+    const res = await signUp(email, password, { gym_name: gymName.trim(), owner_name: ownerName.trim(), phone: phone.trim() });
     setLoading(false);
     if (!res.ok) return setError(res.error);
     setEmail(res.email);

@@ -206,7 +206,7 @@ export default function Layout() {
                     {currentTitle}
                   </h1>
                   <p className="text-[10px] text-muted-foreground leading-tight hidden xs:block lg:hidden truncate">
-                    Fitaval Gym Management
+                    {getSession()?.gym_name || getSession()?.user?.gym_name || getSession()?.gymName || "Fitaval Gym Management"}
                   </p>
                 </div>
               </Link>
@@ -233,7 +233,7 @@ export default function Layout() {
                 title="Settings & Profile"
                 className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold hover:opacity-90 transition-opacity shadow-sm"
               >
-                {(getSession()?.name || getSession()?.user?.name || "Gym Owner")
+                {(getSession()?.owner_name || getSession()?.user?.owner_name || getSession()?.name || getSession()?.user?.name || "Gym Owner")
                   .split(" ")
                   .map((w) => w[0])
                   .filter(Boolean)

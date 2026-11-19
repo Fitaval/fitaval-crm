@@ -61,7 +61,7 @@ export function GymDetail({ routeGymId }) {
   if (!gym) return <Locked title="Gym not found" text="Go back to All Gyms and pick a gym from the list." />;
 
   const ownerObj = typeof gym.owner === 'object' ? gym.owner : null;
-  const ownerName = ownerObj?.name || (typeof gym.owner === 'string' ? gym.owner : (gym.owner_name || 'Gym Owner'));
+  const ownerName = ownerObj?.name || gym.owner_name || (typeof gym.owner === 'string' ? gym.owner : 'Gym Owner');
   const ownerEmail = ownerObj?.email || gym.contact_email || gym.email || gym.owner_email || '';
   const ownerPhone = ownerObj?.phone || gym.contact_phone || gym.phone || gym.owner_phone || '';
 

@@ -80,8 +80,10 @@ export default function More() {
   const ownerName =
     user?.full_name ||
     user?.name ||
+    session?.user?.owner_name ||
     session?.user?.full_name ||
     session?.user?.name ||
+    session?.owner_name ||
     session?.name ||
     profile?.owner_name ||
     "Gym Owner";
@@ -135,9 +137,9 @@ export default function More() {
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                 <span>Gym Owner</span>
               </div>
-              {profile?.name && (
+              {(profile?.name || session?.user?.gym_name || session?.gym_name) && (
                 <span className="text-[11px] text-white/60 truncate">
-                  {profile.name}
+                  {profile?.name || session?.user?.gym_name || session?.gym_name}
                 </span>
               )}
             </div>

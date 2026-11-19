@@ -8,6 +8,7 @@ import {
   MapPin,
   Phone,
   Mail,
+  User,
   Clock,
   Check,
   Camera,
@@ -73,6 +74,7 @@ export default function GymProfilePage() {
 
   const [form, setForm] = useState(() => ({
     name: "",
+    owner_name: "",
     logo_url: "",
     address: "",
     city: "",
@@ -108,6 +110,7 @@ export default function GymProfilePage() {
                   : []));
         setForm({
           name: item.name || "",
+          owner_name: item.owner_name || "",
           logo_url: item.logo_url || "",
           address: item.address || "",
           city: item.city || "",
@@ -365,6 +368,16 @@ export default function GymProfilePage() {
         </p>
 
         <div className="space-y-2.5 text-xs">
+          <div className="flex items-start gap-2.5">
+            <User className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[10px] text-muted-foreground font-semibold">Owner / Manager</p>
+              <p className="font-semibold text-foreground mt-0.5">
+                {profile?.owner_name || "Gym Owner"}
+              </p>
+            </div>
+          </div>
+
           <div className="flex items-start gap-2.5">
             <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
             <div>
@@ -758,6 +771,17 @@ export default function GymProfilePage() {
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   required
+                  className="mt-1 rounded-xl h-11 text-xs sm:text-sm"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="gym-profile-owner-name" className="text-xs font-semibold">Owner / Manager Name</Label>
+                <Input id="gym-profile-owner-name" name="owner_name"
+                  autoComplete="name"
+                  placeholder="e.g. John Martinez"
+                  value={form.owner_name || ""}
+                  onChange={(e) => setForm({ ...form, owner_name: e.target.value })}
                   className="mt-1 rounded-xl h-11 text-xs sm:text-sm"
                 />
               </div>
