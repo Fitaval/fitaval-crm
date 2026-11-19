@@ -50,7 +50,12 @@ export function NavBtn({ active, icon, label, onClick, child, collapsed, to }) {
 
 export function Sidebar({ section, setSection, open, onClose, collapsed, onCollapse, onLogout }) {
   const { roleObj } = useApp();
-  const inGym = section === 'gym' || section === 'plans' || section === 'gymDetail';
+  const inGym =
+    section === 'gym' ||
+    section === 'plans' ||
+    section === 'gymDetail' ||
+    section === 'commissions' ||
+    section === 'withdrawals';
   const [gymOpen, setGymOpen] = useState(true);
   const pick = (id) => {
     setSection(id);

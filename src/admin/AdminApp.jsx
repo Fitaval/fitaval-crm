@@ -17,6 +17,8 @@ import { Accounts } from './pages/account/Accounts';
 import { Dashboard } from './pages/dashboard/Dashboard';
 import { GymManagement } from './pages/gyms/GymManagement';
 import { SubscriptionPlans } from './pages/gyms/SubscriptionPlans';
+import { CommissionManagement } from './pages/commissions/CommissionManagement';
+import { WithdrawalManagement } from './pages/withdrawals/WithdrawalManagement';
 import { GymDetail } from './pages/gyms/detail/GymDetail';
 import { UserManagement } from './pages/users/UserManagement';
 import { logout, getSession, startSession } from '../portal/session';
@@ -41,6 +43,8 @@ function AdminAppContent() {
     if (p === '/admin' || p === '/admin/dashboard') return 'dashboard';
     if (p === '/admin/gyms' || p === '/admin/gym') return 'gym';
     if (p.startsWith('/admin/gyms/')) return 'gymDetail';
+    if (p === '/admin/commissions' || p === '/admin/commission') return 'commissions';
+    if (p === '/admin/withdrawals' || p === '/admin/withdrawal') return 'withdrawals';
     if (p === '/admin/plans' || p === '/admin/subscriptions' || p === '/admin/subscription-plans') return 'plans';
     if (p === '/admin/users' || p === '/admin/members') return 'users';
     if (p === '/admin/account' || p === '/admin/accounts' || p === '/admin/profile') return 'account';
@@ -54,6 +58,8 @@ function AdminAppContent() {
       if (gymId) navigate(`/admin/gyms/${gymId}`);
       else navigate('/admin/gyms');
     }
+    else if (id === 'commissions') navigate('/admin/commissions');
+    else if (id === 'withdrawals') navigate('/admin/withdrawals');
     else if (id === 'plans') navigate('/admin/plans');
     else if (id === 'users') navigate('/admin/users');
     else if (id === 'account' || id === 'accounts') navigate('/admin/account');
@@ -553,6 +559,10 @@ function AdminAppContent() {
               <Route path="/admin/gym" element={<Navigate to="/admin/gyms" replace />} />
               <Route path="/admin/gyms/:gymId" element={<GymDetail />} />
               <Route path="/admin/gyms/:gymId/:subTab" element={<GymDetail />} />
+              <Route path="/admin/commissions" element={<CommissionManagement />} />
+              <Route path="/admin/commission" element={<Navigate to="/admin/commissions" replace />} />
+              <Route path="/admin/withdrawals" element={<WithdrawalManagement />} />
+              <Route path="/admin/withdrawal" element={<Navigate to="/admin/withdrawals" replace />} />
               <Route path="/admin/plans" element={<SubscriptionPlans />} />
               <Route path="/admin/subscriptions" element={<Navigate to="/admin/plans" replace />} />
               <Route path="/admin/subscription-plans" element={<Navigate to="/admin/plans" replace />} />

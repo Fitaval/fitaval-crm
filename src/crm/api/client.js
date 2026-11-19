@@ -122,6 +122,35 @@ export const client = {
     },
   },
 
+  wallet: {
+    async get() {
+      return await apiRequest('/crm/wallet/');
+    },
+    async withdraw(amount) {
+      return await apiRequest('/crm/wallet/withdraw/', {
+        method: 'POST',
+        body: JSON.stringify({ amount }),
+      });
+    },
+    async withdrawals() {
+      return await apiRequest('/crm/wallet/withdrawals/');
+    },
+  },
+
+  bankAccount: {
+    async get() {
+      return await apiRequest('/crm/bank-account/');
+    },
+    async initiateRPD() {
+      return await apiRequest('/crm/bank-account/rpd-initiate/', {
+        method: 'POST',
+      });
+    },
+    async rpdStatus() {
+      return await apiRequest('/crm/bank-account/rpd-status/');
+    },
+  },
+
   auth: {
     async me() {
       const session = getSession();

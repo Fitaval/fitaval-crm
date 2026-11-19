@@ -250,6 +250,50 @@ export const adminClient = {
       });
     },
   },
+
+  // 11. Dynamic Commission Management
+  commissions: {
+    async list(params = {}) {
+      const q = new URLSearchParams(params).toString();
+      return apiRequest('/admin/commissions/' + (q ? `?${q}` : ''));
+    },
+    async update(gymId, commission_percentage, reason = '') {
+      return apiRequest(`/admin/commissions/${gymId}/`, {
+        method: 'PATCH',
+        body: JSON.stringify({ commission_percentage, reason }),
+      });
+    },
+  },
+
+  // 12. Reverse Penny Drop Bank Verification Review & Unlocking
+  bankAccounts: {
+    async approve(gymId, note = '') {
+      return apiRequest(`/admin/bank-accounts/${gymId}/approve/`, {
+        method: 'POST',
+        body: JSON.stringify({ note }),
+      });
+    },
+    async unlock(gymId, reason = '') {
+      return apiRequest(`/admin/bank-accounts/${gymId}/unlock/`, {
+        method: 'PATCH',
+        body: JSON.stringify({ reason }),
+      });
+    },
+  },
+
+  // 13. Withdrawal Monitoring & Manual Overrides
+  withdrawals: {
+    async list(params = {}) {
+      const q = new URLSearchParams(params).toString();
+      return apiRequest('/admin/withdrawals/' + (q ? `?${q}` : ''));
+    },
+    async override(id, action, utr = '', reason = '') {
+      return apiRequest(`/admin/withdrawals/${id}/override/`, {
+        method: 'POST',
+        body: JSON.stringify({ action, bank_utr: utr, reason }),
+      });
+    },
+  },
 };
 
 export default adminClient;

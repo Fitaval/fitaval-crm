@@ -43,8 +43,70 @@ export function ReviewModal({ g, onClose, onDone }) {
   const [noteSaving, setNoteSaving] = useState(false);
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState('');
+  const [bankAcc, setBankAcc] = useState(() => g.bank_account || null);
+  const [bankProcessing, setBankProcessing] = useState(false);
+  const [unlockReason, setUnlockReason] = useState('');
+  const [showUnlockModal, setShowUnlockModal] = useState(false);
   const verified = DOCS.filter((d, i) => Boolean(docs[d]) || checks[i]).length;
   const st = g.status.toUpperCase().replace(' ', '_');
+
+  const handleApproveBank = async () => {
+    setBankProcessing(true);
+    try {
+      const res = await adminClient.bankAccounts.approve(g.id, note);
+      setBankAcc((prev) => ({
+        ...(prev || {}),
+        verification_status: 'verified',
+        is_locked: true,
+      }));
+      toast({
+        title: 'Bank account approved',
+        desc: 'Bank account marked as verified and locked.',
+      });
+    } catch (e) {
+      toast({
+        title: 'Approval failed',
+        desc: e.message || 'Could not approve bank account.',
+        variant: 'destructive',
+      });
+    } finally {
+      setBankProcessing(false);
+    }
+  };
+
+  const handleUnlockBank = async () => {
+    if (!unlockReason.trim()) {
+      toast({
+        title: 'Reason required',
+        desc: 'Please specify reason for unlocking bank account.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setBankProcessing(true);
+    try {
+      await adminClient.bankAccounts.unlock(g.id, unlockReason.trim());
+      setBankAcc((prev) => ({
+        ...(prev || {}),
+        verification_status: 'not_initiated',
+        is_locked: false,
+      }));
+      setShowUnlockModal(false);
+      setUnlockReason('');
+      toast({
+        title: 'Bank account unlocked',
+        desc: 'Gym owner can now perform a new UPI verification flow.',
+      });
+    } catch (e) {
+      toast({
+        title: 'Unlock failed',
+        desc: e.message || 'Could not unlock bank account.',
+        variant: 'destructive',
+      });
+    } finally {
+      setBankProcessing(false);
+    }
+  };
 
   const saveNote = async () => {
     try {
@@ -216,6 +278,119 @@ export function ReviewModal({ g, onClose, onDone }) {
           </dd>
         </div>
       </dl>
+
+      {/* Payout Bank Account Details & Verification */}
+      <div className="mt-5 rounded-lg border border-zinc-200 bg-zinc-50/70 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Icon n="Building" size={16} className="text-zinc-600 dark:text-zinc-400" />
+            <h4 className="text-sm font-semibold text-zinc-950 dark:text-white">Payout Account (RPD)</h4>
+          </div>
+          {bankAcc && (
+            <Badge tone={
+              bankAcc.verification_status === 'verified' ? 'green' :
+              bankAcc.verification_status === 'needs_admin_review' ? 'amber' :
+              bankAcc.verification_status === 'failed' ? 'red' : 'gray'
+            }>
+              {bankAcc.verification_status}
+            </Badge>
+          )}
+        </div>
+
+        {bankAcc ? (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <span className="text-zinc-500">Account Number:</span>
+                <p className="font-mono font-bold text-zinc-950 dark:text-white">
+                  {bankAcc.account_number_masked || '••••••••'}
+                </p>
+              </div>
+              <div>
+                <span className="text-zinc-500">IFSC & Bank:</span>
+                <p className="font-mono text-zinc-800 dark:text-zinc-200">
+                  {bankAcc.ifsc_code} {bankAcc.bank_name ? `(${bankAcc.bank_name})` : ''}
+                </p>
+              </div>
+              <div>
+                <span className="text-zinc-500">Registered Owner:</span>
+                <p className="font-medium text-zinc-950 dark:text-white">{g.owner || '—'}</p>
+              </div>
+              <div>
+                <span className="text-zinc-500">Name at Bank:</span>
+                <p className={cx('font-medium', bankAcc.verification_status === 'needs_admin_review' ? 'text-amber-600 font-bold' : 'text-zinc-950 dark:text-white')}>
+                  {bankAcc.name_at_bank || '—'}
+                </p>
+              </div>
+              {bankAcc.upi_vpa && (
+                <div className="col-span-2">
+                  <span className="text-zinc-500">Verified UPI ID:</span>
+                  <p className="font-mono text-zinc-800 dark:text-zinc-200">{bankAcc.upi_vpa}</p>
+                </div>
+              )}
+            </div>
+
+            {bankAcc.verification_status === 'needs_admin_review' && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <p>
+                    <strong>Name mismatch:</strong> Name at bank ({bankAcc.name_at_bank}) differs slightly from owner/trade name ({g.owner}). Review and approve if legitimate.
+                  </p>
+                  {perms.editGym && (
+                    <Btn size="sm" v="dark" disabled={bankProcessing} onClick={handleApproveBank} className="shrink-0">
+                      {bankProcessing ? 'Approving...' : 'Approve Account'}
+                    </Btn>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {bankAcc.verification_status === 'verified' && (
+              <div className="flex items-center justify-between pt-1 text-xs">
+                <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
+                  <Icon n="Lock" size={12} />
+                  Account locked & ready for withdrawals
+                </span>
+                {perms.editGym && (
+                  <Btn size="sm" v="outline" onClick={() => setShowUnlockModal(true)}>
+                    Unlock Account
+                  </Btn>
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-xs text-zinc-500 italic">No payout account linked or initiated yet via UPI RPD.</p>
+        )}
+      </div>
+
+      {showUnlockModal && (
+        <div className="mt-4 space-y-3 rounded-lg border-2 border-zinc-950 p-3 bg-zinc-50 dark:bg-zinc-900">
+          <Field label="Reason for Unlocking Bank Account" id="unlock-reason" sub="Required for audit trail">
+            <input
+              id="unlock-reason"
+              className={inputCls}
+              value={unlockReason}
+              onChange={(e) => setUnlockReason(e.target.value)}
+              placeholder="e.g. Owner opened new current account under partnership name"
+            />
+          </Field>
+          <div className="flex gap-2">
+            <Btn v="dark" disabled={!unlockReason.trim() || bankProcessing} onClick={handleUnlockBank}>
+              {bankProcessing ? 'Unlocking...' : 'Confirm Unlock'}
+            </Btn>
+            <Btn
+              v="ghost"
+              onClick={() => {
+                setShowUnlockModal(false);
+                setUnlockReason('');
+              }}
+            >
+              Cancel
+            </Btn>
+          </div>
+        </div>
+      )}
       <div className="mt-5">
         <div className="mb-2 flex items-center justify-between">
           <p className="text-sm font-semibold">
