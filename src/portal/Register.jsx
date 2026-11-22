@@ -41,10 +41,8 @@ export default function Register() {
     if (cleanDigits) {
       if (cleanDigits.length === 10) {
         formattedPhone = `+91${cleanDigits}`;
-      } else if (cleanDigits.length === 12 && cleanDigits.startsWith('91')) {
-        formattedPhone = `+${cleanDigits}`;
       } else {
-        return setError('Enter a valid 10-digit Indian mobile number or leave it blank.');
+        return setError('Enter a valid 10-digit mobile number or leave it blank.');
       }
     }
 
@@ -191,17 +189,21 @@ export default function Register() {
             type="tel"
             autoComplete="tel"
             inputMode="numeric"
-            maxLength={14}
-            placeholder="98765 43210"
+            maxLength={10}
+            placeholder="9876543210"
             value={phone}
             onChange={(e) => {
-              let val = e.target.value;
+              let val = e.target.value.trim();
               if (val.startsWith('+91')) {
                 val = val.slice(3);
+              } else if (val.startsWith('91') && val.length > 10) {
+                val = val.slice(2);
               } else if (val.startsWith('+')) {
                 val = val.slice(1);
+              } else if (val.startsWith('0') && val.length > 10) {
+                val = val.slice(1);
               }
-              val = val.replace(/[^\d\s]/g, '');
+              val = val.replace(/\D/g, '').slice(0, 10);
               setPhone(val);
               setError('');
             }}
