@@ -39,6 +39,64 @@ export function SecurityTab() {
   const [pw, setPw] = useState({ cur: '', next: '', conf: '' });
   const [revoke, setRevoke] = useState(true);
 
+  // Email change OTP state
+  const [showEmailChange, setShowEmailChange] = useState(false);
+  const [emailChangeStep, setEmailChangeStep] = useState('request');
+  const [newEmail, setNewEmail] = useState('');
+  const [emailOtp, setEmailOtp] = useState('');
+  const [sendingEmailOtp, setSendingEmailOtp] = useState(false);
+  const [verifyingEmailOtp, setVerifyingEmailOtp] = useState(false);
+  const [emailChangeError, setEmailChangeError] = useState('');
+  const [emailChangeSuccess, setEmailChangeSuccess] = useState('');
+
+  const handleSendEmailChangeOtp = async () => {
+    try {
+      setSendingEmailOtp(true);
+      setEmailChangeError('');
+      await httpClient.post('/auth/email/change/send-otp/', { email: newEmail.trim() });
+      setEmailChangeStep('verify');
+      toast({ title: 'Verification code sent', desc: `Check your inbox at ${newEmail.trim()}` });
+    } catch (err) {
+      console.error(err);
+      setEmailChangeError(err.message || 'Failed to send verification code');
+      toast({ title: 'Failed to send OTP', desc: err.message, variant: 'destructive' });
+    } finally {
+      setSendingEmailOtp(false);
+    }
+  };
+
+  const handleVerifyEmailChangeOtp = async () => {
+    try {
+      setVerifyingEmailOtp(true);
+      setEmailChangeError('');
+      const res = await httpClient.post('/auth/email/change/verify-otp/', {
+        email: newEmail.trim(),
+        otp: emailOtp.trim(),
+      });
+      const updatedEmail = res?.email || newEmail.trim();
+      setP((prev) => ({ ...prev, email: updatedEmail }));
+      const existing = getSession() || {};
+      startSession({
+        ...existing,
+        email: updatedEmail,
+        user: { ...(existing.user || {}), email: updatedEmail },
+      });
+      setEmailChangeSuccess('Email successfully updated and verified!');
+      toast({ title: 'Email updated', desc: `Your account email is now ${updatedEmail}.` });
+      setTimeout(() => {
+        setShowEmailChange(false);
+        setEmailChangeStep('request');
+        setEmailChangeSuccess('');
+      }, 2000);
+    } catch (err) {
+      console.error(err);
+      setEmailChangeError(err.message || 'Invalid verification code.');
+      toast({ title: 'Verification failed', desc: err.message, variant: 'destructive' });
+    } finally {
+      setVerifyingEmailOtp(false);
+    }
+  };
+
   const handleSaveProfile = async () => {
     try {
       setSavingProfile(true);
@@ -150,7 +208,21 @@ export function SecurityTab() {
               value={p.title}
             />
           </Field>
-          <Field label="Work email (View only)" id="pf-email">
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label htmlFor="pf-email" className="block text-xs font-semibold text-zinc-900">
+                Work email
+              </label>
+              {!showEmailChange && (
+                <button
+                  type="button"
+                  onClick={() => setShowEmailChange(true)}
+                  className="text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 underline"
+                >
+                  Change Email
+                </button>
+              )}
+            </div>
             <input
               id="pf-email"
               type="email"
@@ -159,17 +231,121 @@ export function SecurityTab() {
               className={cx(inputCls, 'bg-zinc-100 text-zinc-500 cursor-not-allowed border-zinc-200')}
               value={p.email}
             />
-          </Field>
+          </div>
+
           <Field label="Phone" id="pf-phone">
-            <input
-              id="pf-phone"
-              className={inputCls}
-              value={p.phone}
-              onChange={(e) => setP({ ...p, phone: e.target.value })}
-              placeholder="+91 98765 43210"
-            />
+            <div className="flex rounded-md border border-zinc-200 overflow-hidden bg-white focus-within:ring-1 focus-within:ring-zinc-950">
+              <span className="inline-flex items-center px-3 bg-zinc-100 text-zinc-600 text-xs font-semibold border-r border-zinc-200 select-none">
+                +91
+              </span>
+              <input
+                id="pf-phone"
+                type="tel"
+                inputMode="numeric"
+                maxLength={10}
+                className="flex-1 h-9 px-3 text-xs sm:text-sm outline-none bg-transparent"
+                value={(p.phone || '').replace(/^\+91/, '').replace(/\D/g, '').slice(0, 10)}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/^\+91/, '').replace(/\D/g, '').slice(0, 10);
+                  setP({ ...p, phone: digits ? `+91${digits}` : '' });
+                }}
+                placeholder="9876543210"
+              />
+            </div>
           </Field>
         </div>
+
+        {showEmailChange && (
+          <div className="mt-4 p-3.5 rounded-lg border border-zinc-200 bg-zinc-50 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold text-zinc-900">Change Admin Work Email</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEmailChange(false);
+                  setEmailChangeStep('request');
+                  setEmailChangeError('');
+                  setNewEmail('');
+                  setEmailOtp('');
+                }}
+                className="text-zinc-500 hover:text-zinc-700 text-xs"
+              >
+                Cancel
+              </button>
+            </div>
+
+            {emailChangeError && (
+              <div className="p-2 rounded bg-rose-50 text-rose-700 border border-rose-200 text-xs">
+                {emailChangeError}
+              </div>
+            )}
+
+            {emailChangeSuccess && (
+              <div className="p-2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs">
+                {emailChangeSuccess}
+              </div>
+            )}
+
+            {emailChangeStep === 'request' ? (
+              <div className="space-y-2">
+                <input
+                  type="email"
+                  className={inputCls}
+                  placeholder="newadmin@fitaval.com"
+                  value={newEmail}
+                  onChange={(e) => {
+                    setNewEmail(e.target.value);
+                    setEmailChangeError('');
+                  }}
+                />
+                <Btn
+                  v="primary"
+                  className="w-full text-xs"
+                  disabled={sendingEmailOtp || !newEmail.trim()}
+                  onClick={handleSendEmailChangeOtp}
+                >
+                  {sendingEmailOtp ? 'Sending OTP...' : 'Send Verification Code'}
+                </Btn>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs text-zinc-600">
+                  Enter the 6-digit verification code sent to <span className="font-semibold text-zinc-900">{newEmail}</span>
+                </p>
+                <input
+                  type="text"
+                  maxLength={6}
+                  inputMode="numeric"
+                  className={cx(inputCls, 'text-center font-mono font-bold tracking-widest')}
+                  placeholder="6-digit OTP"
+                  value={emailOtp}
+                  onChange={(e) => {
+                    setEmailOtp(e.target.value.replace(/\D/g, '').slice(0, 6));
+                    setEmailChangeError('');
+                  }}
+                />
+                <div className="flex gap-2">
+                  <Btn
+                    v="primary"
+                    className="flex-1 text-xs"
+                    disabled={verifyingEmailOtp || emailOtp.length < 6}
+                    onClick={handleVerifyEmailChangeOtp}
+                  >
+                    {verifyingEmailOtp ? 'Verifying...' : 'Verify & Update Email'}
+                  </Btn>
+                  <Btn
+                    v="secondary"
+                    className="text-xs px-3"
+                    disabled={sendingEmailOtp}
+                    onClick={handleSendEmailChangeOtp}
+                  >
+                    Resend
+                  </Btn>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         <div className="mt-4 flex justify-end">
           <Btn
             v="primary"

@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { client } from "@/api/client";
+import { httpClient } from "../../shared/api/httpClient";
+import { getSession, startSession } from "../../portal/session";
 import { getImageUrl } from "@/utils/imageUrl";
 import VerifiedTick from "../../shared/VerifiedTick";
 import { useVerified, setVerified, isVerified, CRM_GYM_ID } from "../../shared/verified";
@@ -67,6 +69,65 @@ export default function GymProfilePage() {
     amenities: true,
     gallery: true,
   });
+
+  const session = getSession();
+  const [loginEmail, setLoginEmail] = useState(session?.user?.email || session?.email || "");
+  const [showEmailChange, setShowEmailChange] = useState(false);
+  const [emailChangeStep, setEmailChangeStep] = useState("request"); // 'request' | 'verify'
+  const [newEmail, setNewEmail] = useState("");
+  const [emailOtp, setEmailOtp] = useState("");
+  const [sendingEmailOtp, setSendingEmailOtp] = useState(false);
+  const [verifyingEmailOtp, setVerifyingEmailOtp] = useState(false);
+  const [emailChangeError, setEmailChangeError] = useState("");
+  const [emailChangeSuccess, setEmailChangeSuccess] = useState("");
+
+  const handleSendEmailChangeOtp = async () => {
+    try {
+      setSendingEmailOtp(true);
+      setEmailChangeError("");
+      await httpClient.post("/auth/email/change/send-otp/", { email: newEmail.trim() });
+      setEmailChangeStep("verify");
+      toast({ title: "Verification code sent", description: `Check your inbox at ${newEmail.trim()}` });
+    } catch (err) {
+      console.error(err);
+      setEmailChangeError(err.message || "Failed to send verification code");
+      toast({ title: "Failed to send OTP", description: err.message, variant: "destructive" });
+    } finally {
+      setSendingEmailOtp(false);
+    }
+  };
+
+  const handleVerifyEmailChangeOtp = async () => {
+    try {
+      setVerifyingEmailOtp(true);
+      setEmailChangeError("");
+      const res = await httpClient.post("/auth/email/change/verify-otp/", {
+        email: newEmail.trim(),
+        otp: emailOtp.trim(),
+      });
+      const updatedEmail = res?.email || newEmail.trim();
+      setLoginEmail(updatedEmail);
+      const existing = getSession() || {};
+      startSession({
+        ...existing,
+        email: updatedEmail,
+        user: { ...(existing.user || {}), email: updatedEmail },
+      });
+      setEmailChangeSuccess("Login email successfully updated and verified!");
+      toast({ title: "Email updated", description: `Your account login email is now ${updatedEmail}.` });
+      setTimeout(() => {
+        setShowEmailChange(false);
+        setEmailChangeStep("request");
+        setEmailChangeSuccess("");
+      }, 2000);
+    } catch (err) {
+      console.error(err);
+      setEmailChangeError(err.message || "Invalid verification code.");
+      toast({ title: "Verification failed", description: err.message, variant: "destructive" });
+    } finally {
+      setVerifyingEmailOtp(false);
+    }
+  };
 
   const toggleSection = (sec) => {
     setExpandedSection((prev) => ({ ...prev, [sec]: !prev[sec] }));
@@ -787,26 +848,172 @@ export default function GymProfilePage() {
               </div>
 
               <div>
-                <Label htmlFor="gym-profile-phone-number" className="text-xs font-semibold">Phone Number *</Label>
-                <Input id="gym-profile-phone-number" name="phone"
-                  autoComplete="tel"
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  required
-                  className="mt-1 rounded-xl h-11 text-xs sm:text-sm"
-                />
+                <Label htmlFor="gym-profile-phone-number" className="text-xs font-semibold">Gym Contact Phone *</Label>
+                <div className="mt-1 flex rounded-xl border border-input bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+                  <span className="inline-flex items-center px-3.5 bg-muted text-muted-foreground text-xs font-bold border-r border-border select-none">
+                    +91
+                  </span>
+                  <input
+                    id="gym-profile-phone-number"
+                    name="phone"
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength={10}
+                    autoComplete="tel"
+                    placeholder="9876543210"
+                    value={(form.phone || "").replace(/^\+91/, "").replace(/\D/g, "").slice(0, 10)}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/^\+91/, "").replace(/\D/g, "").slice(0, 10);
+                      setForm({ ...form, phone: val ? `+91${val}` : "" });
+                    }}
+                    required
+                    className="flex-1 h-11 px-3 bg-transparent text-xs sm:text-sm outline-none"
+                  />
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Public phone number displayed to members for inquiries and WhatsApp calls.
+                </p>
               </div>
 
               <div>
-                <Label htmlFor="gym-profile-email-address" className="text-xs font-semibold">Email Address *</Label>
-                <Input id="gym-profile-email-address" name="email"
+                <Label htmlFor="gym-profile-email-address" className="text-xs font-semibold">Gym Public Contact Email *</Label>
+                <Input
+                  id="gym-profile-email-address"
+                  name="email"
                   autoComplete="email"
                   type="email"
+                  placeholder="contact@yourgym.com"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   required
                   className="mt-1 rounded-xl h-11 text-xs sm:text-sm"
                 />
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Public contact email for member inquiries and reception.
+                </p>
+              </div>
+
+              {/* Account Login Email & Verification Section */}
+              <div className="p-3.5 rounded-2xl bg-muted/40 border border-border space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <Label className="text-xs font-semibold text-foreground">Login / Account Email</Label>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                        <Check className="w-3 h-3" /> Verified
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5 font-mono">
+                      {loginEmail || "owner@fitaval.com"}
+                    </p>
+                  </div>
+                  {!showEmailChange && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowEmailChange(true)}
+                      className="rounded-xl text-xs h-8"
+                    >
+                      Change Login Email
+                    </Button>
+                  )}
+                </div>
+
+                {showEmailChange && (
+                  <div className="p-3 rounded-xl bg-card border border-border space-y-3 mt-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-bold text-foreground">Change Account Login Email</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowEmailChange(false);
+                          setEmailChangeStep("request");
+                          setEmailChangeError("");
+                          setNewEmail("");
+                          setEmailOtp("");
+                        }}
+                        className="text-muted-foreground hover:text-foreground text-xs"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+
+                    {emailChangeError && (
+                      <div className="p-2.5 rounded-lg bg-destructive/10 text-destructive text-xs font-medium border border-destructive/20">
+                        {emailChangeError}
+                      </div>
+                    )}
+
+                    {emailChangeSuccess && (
+                      <div className="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-medium border border-emerald-500/20">
+                        {emailChangeSuccess}
+                      </div>
+                    )}
+
+                    {emailChangeStep === "request" ? (
+                      <div className="space-y-2">
+                        <Label htmlFor="crm-new-email" className="text-xs font-medium">New Email Address</Label>
+                        <Input
+                          id="crm-new-email"
+                          type="email"
+                          placeholder="newemail@yourgym.com"
+                          value={newEmail}
+                          onChange={(e) => {
+                            setNewEmail(e.target.value);
+                            setEmailChangeError("");
+                          }}
+                          className="h-10 text-xs"
+                        />
+                        <Button
+                          type="button"
+                          disabled={sendingEmailOtp || !newEmail.trim()}
+                          onClick={handleSendEmailChangeOtp}
+                          className="w-full text-xs font-bold h-9 mt-1"
+                        >
+                          {sendingEmailOtp ? "Sending OTP..." : "Send Verification Code"}
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <p className="text-xs text-muted-foreground">
+                          Enter the 6-digit verification code sent to <span className="font-semibold text-foreground">{newEmail}</span>
+                        </p>
+                        <Input
+                          type="text"
+                          maxLength={6}
+                          inputMode="numeric"
+                          placeholder="6-digit OTP"
+                          value={emailOtp}
+                          onChange={(e) => {
+                            setEmailOtp(e.target.value.replace(/\D/g, "").slice(0, 6));
+                            setEmailChangeError("");
+                          }}
+                          className="h-10 text-xs font-mono tracking-widest text-center text-sm font-bold"
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            disabled={verifyingEmailOtp || emailOtp.length < 6}
+                            onClick={handleVerifyEmailChangeOtp}
+                            className="flex-1 text-xs font-bold h-9"
+                          >
+                            {verifyingEmailOtp ? "Verifying..." : "Verify & Update Email"}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            disabled={sendingEmailOtp}
+                            onClick={handleSendEmailChangeOtp}
+                            className="text-xs h-9 px-3"
+                          >
+                            Resend
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div>
