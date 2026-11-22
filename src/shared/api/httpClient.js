@@ -215,11 +215,41 @@ export async function httpClient(endpoint, options = {}) {
     // Parse JSON or extract message on failure
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      const message =
-        errorData.detail ||
-        errorData.message ||
-        errorData.error ||
-        (typeof errorData === 'string' ? errorData : `Request failed with status ${response.status}`);
+      let message = null;
+
+      if (typeof errorData === 'string' && errorData.trim()) {
+        message = errorData;
+      } else if (errorData && typeof errorData === 'object') {
+        if (typeof errorData.detail === 'string' && errorData.detail) {
+          message = errorData.detail;
+        } else if (typeof errorData.message === 'string' && errorData.message) {
+          message = errorData.message;
+        } else if (typeof errorData.error === 'string' && errorData.error) {
+          message = errorData.error;
+        } else if (errorData.error && typeof errorData.error === 'object') {
+          const errObj = errorData.error;
+          if (errObj.details) {
+            if (typeof errObj.details === 'string') {
+              message = errObj.details;
+            } else if (typeof errObj.details === 'object') {
+              const detailsMsgs = Object.values(errObj.details).flat().filter(Boolean);
+              if (detailsMsgs.length > 0) message = detailsMsgs.join(' ');
+            }
+          }
+          if (!message && typeof errObj.message === 'string' && errObj.message) {
+            message = errObj.message;
+          } else if (!message && typeof errObj.detail === 'string' && errObj.detail) {
+            message = errObj.detail;
+          }
+        } else if (errorData.details && typeof errorData.details === 'object') {
+          const detailsMsgs = Object.values(errorData.details).flat().filter(Boolean);
+          if (detailsMsgs.length > 0) message = detailsMsgs.join(' ');
+        }
+      }
+
+      if (!message) {
+        message = `Request failed with status ${response.status}`;
+      }
 
       const error = new ApiError(message, response.status, errorData);
       broadcastApiError(error);

@@ -35,8 +35,25 @@ export default function Register() {
     if (!ownerName.trim()) return setError('Enter owner / manager name.');
     if (password.length < 8) return setError('Password must be at least 8 characters.');
     if (password !== confirm) return setError('Passwords do not match.');
+
+    const cleanDigits = phone.replace(/\D/g, '');
+    let formattedPhone = '';
+    if (cleanDigits) {
+      if (cleanDigits.length === 10) {
+        formattedPhone = `+91${cleanDigits}`;
+      } else if (cleanDigits.length === 12 && cleanDigits.startsWith('91')) {
+        formattedPhone = `+${cleanDigits}`;
+      } else {
+        return setError('Enter a valid 10-digit Indian mobile number or leave it blank.');
+      }
+    }
+
     setLoading(true);
-    const res = await signUp(email, password, { gym_name: gymName.trim(), owner_name: ownerName.trim(), phone: phone.trim() });
+    const res = await signUp(email, password, {
+      gym_name: gymName.trim(),
+      owner_name: ownerName.trim(),
+      phone: formattedPhone,
+    });
     setLoading(false);
     if (!res.ok) return setError(res.error);
     setEmail(res.email);
@@ -167,17 +184,29 @@ export default function Register() {
         />
 
         <label htmlFor="pt-phone">Phone Number (Optional)</label>
-        <input
-          id="pt-phone"
-          type="tel"
-          autoComplete="tel"
-          placeholder="e.g. +91 98765 43210"
-          value={phone}
-          onChange={(e) => {
-            setPhone(e.target.value);
-            setError('');
-          }}
-        />
+        <div className="pt-phone-wrap">
+          <span className="pt-phone-prefix">+91</span>
+          <input
+            id="pt-phone"
+            type="tel"
+            autoComplete="tel"
+            inputMode="numeric"
+            maxLength={14}
+            placeholder="98765 43210"
+            value={phone}
+            onChange={(e) => {
+              let val = e.target.value;
+              if (val.startsWith('+91')) {
+                val = val.slice(3);
+              } else if (val.startsWith('+')) {
+                val = val.slice(1);
+              }
+              val = val.replace(/[^\d\s]/g, '');
+              setPhone(val);
+              setError('');
+            }}
+          />
+        </div>
 
         <PasswordField
           id="pt-pass"
