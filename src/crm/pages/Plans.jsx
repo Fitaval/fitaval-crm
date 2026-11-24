@@ -185,6 +185,9 @@ export default function Plans() {
     id: null,
     name: "",
     price: "",
+    original_price: "",
+    discount_percent: 0,
+    badge_text: "",
     duration_value: "30",
     duration_unit: "Days",
     duration_days: 30,
@@ -282,6 +285,9 @@ export default function Plans() {
       id: plan.id,
       name: plan.name || "",
       price: plan.price?.toString() || "",
+      original_price: plan.original_price ? plan.original_price.toString() : "",
+      discount_percent: plan.discount_percent || 0,
+      badge_text: plan.badge_text || (plan.is_recommended ? "Recommended" : ""),
       duration_value: plan.duration_value?.toString() || plan.duration_days?.toString() || "30",
       duration_unit: plan.duration_unit || "Days",
       duration_days: plan.duration_days || 30,
@@ -340,10 +346,18 @@ export default function Plans() {
     try {
       const durationDays = calculateDays(form.duration_value, form.duration_unit);
       const combinedBenefits = JSON.stringify(form.benefitsList);
+      const priceNum = parseFloat(form.price) || 0;
+      const origPriceNum = form.original_price ? parseFloat(form.original_price) : null;
+      const discountPct = (origPriceNum && origPriceNum > priceNum)
+        ? Math.round(((origPriceNum - priceNum) / origPriceNum) * 100)
+        : 0;
 
       const payload = {
         name: form.name.trim(),
-        price: parseFloat(form.price) || 0,
+        price: priceNum,
+        original_price: origPriceNum,
+        discount_percent: discountPct,
+        badge_text: (form.badge_text || "").trim(),
         duration_value: parseInt(form.duration_value, 10) || 1,
         duration_unit: form.duration_unit,
         duration_days: durationDays,
@@ -517,6 +531,19 @@ export default function Plans() {
                     <h3 className="font-bold text-base text-foreground truncate">
                       {p.name}
                     </h3>
+                    {(p.badge_text || (p.is_recommended ? "Recommended" : "")) && (() => {
+                      const badge = p.badge_text || "Recommended";
+                      const isGreen = badge.toLowerCase() === "recommended" || badge.toLowerCase() === "basic plan";
+                      return (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                          isGreen
+                            ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                            : "bg-muted text-muted-foreground border border-border"
+                        }`}>
+                          {badge}
+                        </span>
+                      );
+                    })()}
                   </div>
 
                   {/* Radio button toggle: Left (OFF) and Right (ON) */}
@@ -531,12 +558,22 @@ export default function Plans() {
 
                 {/* 2. Price and Duration */}
                 <div className="flex items-baseline justify-between pt-1 border-t border-border/60">
-                  <div className="flex items-baseline gap-1">
+                  <div className="flex items-baseline gap-2">
                     <span className="text-xl sm:text-2xl font-black text-foreground">
                       ₹{(p.price || 0).toLocaleString("en-IN")}
                     </span>
+                    {p.original_price && Number(p.original_price) > Number(p.price) && (
+                      <span className="text-xs sm:text-sm text-muted-foreground line-through font-medium">
+                        ₹{Number(p.original_price).toLocaleString("en-IN")}
+                      </span>
+                    )}
+                    {p.original_price && Number(p.original_price) > Number(p.price) && (
+                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                        {Math.round(((Number(p.original_price) - Number(p.price)) / Number(p.original_price)) * 100)}% OFF
+                      </span>
+                    )}
                     <span className="text-xs text-muted-foreground font-medium">
-                      / {p.duration_days} days
+                      {p.duration_days === 1 ? "/ day" : (p.duration_days % 30 === 0 ? "/ month" : `/ ${p.duration_days} days`)}
                     </span>
                   </div>
 
@@ -612,24 +649,95 @@ export default function Plans() {
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               required
-              placeholder="e.g. Annual Elite"
+              placeholder="e.g. Annual Elite or 1 month Plan"
               className="mt-1 rounded-xl h-11 text-xs sm:text-sm"
             />
           </div>
 
           <div>
-            <Label htmlFor="plans-price" className="text-xs font-semibold">Price (₹) *</Label>
-            <div className="relative mt-1">
-              <IndianRupee className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
-              <Input id="plans-price" name="price"
-                autoComplete="off"
-                type="number"
-                value={form.price}
-                onChange={(e) => setForm({ ...form, price: e.target.value })}
-                required
-                placeholder="11999"
-                className="pl-9 rounded-xl h-11 text-xs sm:text-sm font-semibold"
-              />
+            <div className="flex items-center justify-between">
+              <Label htmlFor="plans-badge" className="text-xs font-semibold">Plan Badge / Highlight Tag</Label>
+              <span className="text-[11px] text-muted-foreground font-medium">Suggestions:</span>
+            </div>
+            <div className="flex items-center gap-1.5 mt-1.5 mb-1.5">
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, badge_text: "Recommended" })}
+                className={`text-[11px] px-2.5 py-1 rounded-full border transition-all cursor-pointer ${
+                  form.badge_text === "Recommended"
+                    ? "bg-emerald-600/20 border-emerald-500 text-emerald-600 dark:text-emerald-400 font-bold"
+                    : "bg-muted/50 border-border text-muted-foreground hover:border-emerald-500/50"
+                }`}
+              >
+                + Recommended
+              </button>
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, badge_text: "Basic Plan" })}
+                className={`text-[11px] px-2.5 py-1 rounded-full border transition-all cursor-pointer ${
+                  form.badge_text === "Basic Plan"
+                    ? "bg-emerald-600/20 border-emerald-500 text-emerald-600 dark:text-emerald-400 font-bold"
+                    : "bg-muted/50 border-border text-muted-foreground hover:border-emerald-500/50"
+                }`}
+              >
+                + Basic Plan
+              </button>
+              {form.badge_text && (
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, badge_text: "" })}
+                  className="text-[11px] px-2 py-1 text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            <Input id="plans-badge" name="badge_text"
+              autoComplete="off"
+              value={form.badge_text}
+              onChange={(e) => setForm({ ...form, badge_text: e.target.value })}
+              placeholder="e.g. Recommended, Basic Plan, Trimester Plan..."
+              className="rounded-xl h-11 text-xs sm:text-sm"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="plans-price" className="text-xs font-semibold">Selling / Offer Price (₹) *</Label>
+              <div className="relative mt-1">
+                <IndianRupee className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                <Input id="plans-price" name="price"
+                  autoComplete="off"
+                  type="number"
+                  value={form.price}
+                  onChange={(e) => setForm({ ...form, price: e.target.value })}
+                  required
+                  placeholder="3999"
+                  className="pl-9 rounded-xl h-11 text-xs sm:text-sm font-semibold"
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="plans-original-price" className="text-xs font-semibold">Regular / Original Price (₹)</Label>
+                {form.original_price && parseFloat(form.original_price) > parseFloat(form.price) && (
+                  <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                    {Math.round(((parseFloat(form.original_price) - parseFloat(form.price)) / parseFloat(form.original_price)) * 100)}% OFF
+                  </span>
+                )}
+              </div>
+              <div className="relative mt-1">
+                <IndianRupee className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                <Input id="plans-original-price" name="original_price"
+                  autoComplete="off"
+                  type="number"
+                  value={form.original_price}
+                  onChange={(e) => setForm({ ...form, original_price: e.target.value })}
+                  placeholder="e.g. 4999 (optional)"
+                  className="pl-9 rounded-xl h-11 text-xs sm:text-sm"
+                />
+              </div>
             </div>
           </div>
 
@@ -857,11 +965,23 @@ export default function Plans() {
           >
             <div className="p-4 bg-card rounded-2xl border border-border flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <h3 className="font-extrabold text-2xl text-foreground">
-                  ₹{(pl.price || 0).toLocaleString("en-IN")}
-                </h3>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="font-extrabold text-2xl text-foreground">
+                    ₹{(pl.price || 0).toLocaleString("en-IN")}
+                  </h3>
+                  {pl.original_price && Number(pl.original_price) > Number(pl.price) && (
+                    <span className="text-sm text-muted-foreground line-through font-semibold">
+                      ₹{Number(pl.original_price).toLocaleString("en-IN")}
+                    </span>
+                  )}
+                  {pl.original_price && Number(pl.original_price) > Number(pl.price) && (
+                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
+                      {Math.round(((Number(pl.original_price) - Number(pl.price)) / Number(pl.original_price)) * 100)}% OFF
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Valid for {pl.duration_days} days
+                  Valid for {pl.duration_days === 1 ? "1 day" : (pl.duration_days % 30 === 0 ? `${pl.duration_days / 30} month(s)` : `${pl.duration_days} days`)}
                 </p>
               </div>
               <PlanStatusRadioToggle
@@ -907,8 +1027,14 @@ export default function Plans() {
             </DetailSection>
 
             <DetailSection title="Plan Info" icon={Users}>
+              {pl.badge_text && (
+                <DetailRow label="Plan badge" value={pl.badge_text} />
+              )}
               <DetailRow label="Enrolled members" value={`${enrolled}`} />
               <DetailRow label="Price per cycle" value={`₹${(pl.price || 0).toLocaleString("en-IN")}`} />
+              {pl.original_price && Number(pl.original_price) > Number(pl.price) && (
+                <DetailRow label="Original price" value={`₹${Number(pl.original_price).toLocaleString("en-IN")}`} />
+              )}
               <DetailRow label="Duration" value={durationLabel === `${pl.duration_days} Days` ? durationLabel : `${durationLabel} (${pl.duration_days} days)`} />
               <DetailRow label="Created" value={pl.created_date} />
             </DetailSection>
