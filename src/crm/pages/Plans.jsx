@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { client } from "@/api/client";
+import { useSessionQuery } from "../../shared/cache/useSessionQuery";
 import { useToast } from "@/components/ui/use-toast";
 import {
   Tag,
@@ -163,9 +164,28 @@ export function PlanStatusRadioToggle({
 
 export default function Plans() {
   const { toast } = useToast();
-  const [plans, setPlans] = useState([]);
-  const [members, setMembers] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const {
+    data: rawPlans,
+    setData: setPlans,
+    isLoading: plansLoading,
+    error: plansError,
+    refetch: refetchPlans,
+  } = useSessionQuery(
+    "crm:entity:plans:list:-created_date:100",
+    () => client.entities.MembershipPlan.list("-created_date", 100),
+    { initialData: [] }
+  );
+  const {
+    data: rawMembers,
+    refetch: refetchMembers,
+  } = useSessionQuery(
+    "crm:entity:members:list:-created_date:500",
+    () => client.entities.Member.list("-created_date", 500),
+    { initialData: [] }
+  );
+  const plans = useMemo(() => (Array.isArray(rawPlans) ? rawPlans : []), [rawPlans]);
+  const members = useMemo(() => (Array.isArray(rawMembers) ? rawMembers : []), [rawMembers]);
+  const loading = plansLoading && plans.length === 0;
   const [filterStatus, setFilterStatus] = useState("all"); // 'all' | 'on' | 'off'
 
   // Mobile Bottom Action Sheet for "⋮"
@@ -197,29 +217,18 @@ export default function Plans() {
   const [form, setForm] = useState(initialForm);
 
   const fetchData = async () => {
-    try {
-      if (plans.length === 0) setLoading(true);
-      const [p, m] = await Promise.all([
-        client.entities.MembershipPlan.list("-created_date", 100),
-        client.entities.Member.list("-created_date", 500),
-      ]);
-      setPlans(p);
-      setMembers(m);
-    } catch (e) {
-      console.error(e);
-      toast({
-        title: "Failed to load plans",
-        description: e.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    await Promise.all([refetchPlans(), refetchMembers()]);
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (plansError && plans.length === 0) {
+      toast({
+        title: "Failed to load plans",
+        description: plansError.message,
+        variant: "destructive",
+      });
+    }
+  }, [plansError, plans.length, toast]);
 
   const memberCountByPlan = useMemo(() => {
     const counts = {};

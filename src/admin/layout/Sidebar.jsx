@@ -81,7 +81,7 @@ export function Sidebar({ section, setSection, open, onClose, collapsed, onColla
           <img
             src={dark ? '/fitaval-logo-dark.png' : '/fitaval-logo-light.png'}
             alt="Fitaval Logo"
-            className="h-9 w-9 shrink-0 object-contain"
+            className="h-10 w-10 shrink-0 object-contain"
           />
           <div className={hide}>
             <p className="text-base font-bold leading-none tracking-tight text-foreground">Fitaval</p>

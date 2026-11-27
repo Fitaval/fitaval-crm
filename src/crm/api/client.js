@@ -12,6 +12,7 @@ import { clearSession, getSession, startSession } from '../../portal/session';
 import { API_BASE } from '../../config/env';
 import { httpClient } from '../../shared/api/httpClient';
 import { tokenManager } from '../../shared/auth/tokenManager';
+import { sessionCache } from '../../shared/cache/sessionCache';
 
 export { API_BASE };
 
@@ -22,14 +23,16 @@ async function apiRequest(endpoint, options = {}) {
 
 // Live DRF Entity Store communicating directly with /api/v1/crm/<endpoint>/
 function createEntityStore(endpoint) {
+  const cachePrefix = `crm:entity:${endpoint}:`;
+
   return {
-    listSync() {
-      // Synchronous initial fallback returns empty array while async network fetch is in progress
-      return [];
+    listSync(sortField, limit = 100) {
+      const key = `${cachePrefix}list:${sortField || ''}:${limit || ''}`;
+      return sessionCache.get(key) || [];
     },
 
-    getSync() {
-      return null;
+    getSync(id) {
+      return sessionCache.get(`${cachePrefix}item:${id}`) || null;
     },
 
     async list(sortField, limit = 100) {
@@ -41,37 +44,50 @@ function createEntityStore(endpoint) {
       if (limit) params.set('page_size', String(limit));
 
       const queryStr = params.toString() ? `?${params.toString()}` : '';
-      const res = await apiRequest(`/crm/${endpoint}/${queryStr}`);
+      const cacheKey = `${cachePrefix}list:${sortField || ''}:${limit || ''}`;
 
-      if (Array.isArray(res)) return res;
-      if (res && Array.isArray(res.results)) return res.results;
-      if (res && Array.isArray(res.data)) return res.data;
-      if (res && typeof res === 'object') return [res];
-      return [];
+      return sessionCache.fetchAndCache(cacheKey, async () => {
+        const res = await apiRequest(`/crm/${endpoint}/${queryStr}`);
+        if (Array.isArray(res)) return res;
+        if (res && Array.isArray(res.results)) return res.results;
+        if (res && Array.isArray(res.data)) return res.data;
+        if (res && typeof res === 'object') return [res];
+        return [];
+      });
     },
 
     async get(id) {
-      return await apiRequest(`/crm/${endpoint}/${id}/`);
+      return sessionCache.fetchAndCache(`${cachePrefix}item:${id}`, () =>
+        apiRequest(`/crm/${endpoint}/${id}/`)
+      );
     },
 
     async create(data) {
-      return await apiRequest(`/crm/${endpoint}/`, {
+      const created = await apiRequest(`/crm/${endpoint}/`, {
         method: 'POST',
         body: JSON.stringify(data),
       });
+      sessionCache.invalidate(cachePrefix, { prefix: true });
+      sessionCache.invalidate('crm:dashboard:', { prefix: true });
+      return created;
     },
 
     async update(id, patch) {
-      return await apiRequest(`/crm/${endpoint}/${id}/`, {
+      const updated = await apiRequest(`/crm/${endpoint}/${id}/`, {
         method: 'PATCH',
         body: JSON.stringify(patch),
       });
+      sessionCache.invalidate(cachePrefix, { prefix: true });
+      sessionCache.invalidate('crm:dashboard:', { prefix: true });
+      return updated;
     },
 
     async delete(id) {
       await apiRequest(`/crm/${endpoint}/${id}/`, {
         method: 'DELETE',
       });
+      sessionCache.invalidate(cachePrefix, { prefix: true });
+      sessionCache.invalidate('crm:dashboard:', { prefix: true });
       return { success: true };
     },
   };
@@ -106,18 +122,28 @@ export const client = {
       },
     },
     Dashboard: {
+      getSync(params = {}) {
+        const qs = new URLSearchParams(params).toString();
+        return sessionCache.get(`crm:dashboard:${qs}`) || null;
+      },
       async get(params = {}) {
         const qs = new URLSearchParams(params).toString();
-        return await apiRequest(`/crm/dashboard/${qs ? '?' + qs : ''}`);
+        return sessionCache.fetchAndCache(`crm:dashboard:${qs}`, () =>
+          apiRequest(`/crm/dashboard/${qs ? '?' + qs : ''}`)
+        );
       },
       async update(data) {
-        return await apiRequest('/crm/dashboard/', {
+        const updated = await apiRequest('/crm/dashboard/', {
           method: 'POST',
           body: JSON.stringify(data),
         });
+        sessionCache.invalidate('crm:dashboard:', { prefix: true });
+        return updated;
       },
       async refresh() {
-        return await apiRequest('/crm/dashboard/?refresh=true');
+        const fresh = await apiRequest('/crm/dashboard/?refresh=true');
+        sessionCache.set('crm:dashboard:', fresh);
+        return fresh;
       },
     },
   },

@@ -1,34 +1,21 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { adminClient } from '../../api/client';
+import { useSessionQuery } from '../../../shared/cache/useSessionQuery';
 import { Icon } from '../../components/Icon';
 import { Card } from '../../components/ui/Card';
 import { PageHead } from '../../components/ui/PageHead';
 import { fmtDate } from '../../lib/utils';
 
 export function FeedbackManagement() {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: rawItems, isLoading: loading } = useSessionQuery(
+    'admin:feedback',
+    () => adminClient.feedback.list(),
+    { initialData: [] }
+  );
+  const items = useMemo(() => (Array.isArray(rawItems) ? rawItems : []), [rawItems]);
   const [query, setQuery] = useState('');
   const [sourceFilter, setSourceFilter] = useState('all');
   const [optionFilter, setOptionFilter] = useState('all');
-
-  useEffect(() => {
-    let cancelled = false;
-    adminClient.feedback
-      .list()
-      .then((res) => {
-        if (!cancelled) setItems(Array.isArray(res) ? res : []);
-      })
-      .catch(() => {
-        if (!cancelled) setItems([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const crmItems = useMemo(() => items.filter((f) => f.source === 'crm'), [items]);
   const appItems = useMemo(() => items.filter((f) => (f.source || 'app') === 'app'), [items]);

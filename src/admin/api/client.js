@@ -10,6 +10,7 @@
 
 import { API_BASE } from '../../config/env';
 import { httpClient } from '../../shared/api/httpClient';
+import { sessionCache } from '../../shared/cache/sessionCache';
 
 export { API_BASE };
 
@@ -22,7 +23,7 @@ export const adminClient = {
   // Central Super Admin Dashboard
   dashboard: {
     async get() {
-      return apiRequest('/admin/dashboard/');
+      return sessionCache.fetchAndCache('admin:dashboard', () => apiRequest('/admin/dashboard/'));
     },
   },
 
@@ -30,25 +31,34 @@ export const adminClient = {
   gyms: {
     async list(params = {}) {
       const q = new URLSearchParams(params).toString();
-      return apiRequest('/admin/gyms' + (q ? `?${q}` : ''));
+      return sessionCache.fetchAndCache(`admin:gyms:${q}`, () =>
+        apiRequest('/admin/gyms' + (q ? `?${q}` : ''))
+      );
     },
 
     async get(id) {
-      return apiRequest(`/admin/gyms/${id}`);
+      return sessionCache.fetchAndCache(`admin:gym:${id}`, () => apiRequest(`/admin/gyms/${id}`));
     },
 
     async update(id, patch) {
-      return apiRequest(`/admin/gyms/${id}`, {
+      const res = await apiRequest(`/admin/gyms/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(patch),
       });
+      sessionCache.invalidate('admin:gyms:', { prefix: true });
+      sessionCache.invalidate(`admin:gym:${id}`);
+      sessionCache.invalidate('admin:dashboard');
+      return res;
     },
 
     async verify(id, verified) {
-      return apiRequest(`/admin/gyms/${id}/verify/`, {
+      const res = await apiRequest(`/admin/gyms/${id}/verify/`, {
         method: 'POST',
         body: JSON.stringify({ verified }),
       });
+      sessionCache.invalidate('admin:gyms:', { prefix: true });
+      sessionCache.invalidate(`admin:gym:${id}`);
+      return res;
     },
 
     async getPhotos(id) {
@@ -251,10 +261,10 @@ export const adminClient = {
     },
   },
 
-  // 11. App User Feedback
+  // 11. App & CRM Feedback
   feedback: {
     async list() {
-      return apiRequest('/admin/feedback/');
+      return sessionCache.fetchAndCache('admin:feedback', () => apiRequest('/admin/feedback/'));
     },
   },
 

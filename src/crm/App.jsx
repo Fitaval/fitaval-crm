@@ -18,6 +18,8 @@ import GymProfilePage from '@/pages/GymProfilePage';
 import Trainers from '@/pages/Trainers';
 import Wallet from '@/pages/Wallet';
 import Subscription from '@/pages/Subscription';
+import RateFitaval from '@/pages/RateFitaval';
+import HelpSupport from '@/pages/HelpSupport';
 import { handleEnterKeyNavigation } from '@/lib/enterNav';
 
 // Sign-in lives on the shared login page (src/portal), so send a full page load there.
@@ -82,6 +84,8 @@ const AppRoutes = () => {
         <Route path="/gym-profile" element={<GymProfilePage />} />
         <Route path="/wallet" element={<Wallet />} />
         <Route path="/subscription" element={<Subscription />} />
+        <Route path="/rate-fitaval" element={<RateFitaval />} />
+        <Route path="/help-support" element={<HelpSupport />} />
       </Route>
 
       {/* 404 catch-all */}

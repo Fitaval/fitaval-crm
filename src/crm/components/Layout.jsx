@@ -88,6 +88,8 @@ export default function Layout() {
     if (p.startsWith("/gym-profile")) return "Gym Profile";
     if (p.startsWith("/wallet")) return "Wallet";
     if (p.startsWith("/subscription")) return "Subscription";
+    if (p.startsWith("/rate-fitaval")) return "Rate Fitaval";
+    if (p.startsWith("/help-support")) return "Help & Support";
     if (p.startsWith("/settings") || p.startsWith("/more")) return "Settings";
     return "Fitaval CRM";
   })();
@@ -134,12 +136,12 @@ export default function Layout() {
             <img
               src="/fitaval-logo-light.png"
               alt="Fitaval Logo"
-              className="w-9 h-9 object-contain shrink-0 dark:hidden"
+              className="w-10 h-10 object-contain shrink-0 dark:hidden"
             />
             <img
               src="/fitaval-logo-dark.png"
               alt="Fitaval Logo"
-              className="hidden w-9 h-9 object-contain shrink-0 dark:block"
+              className="hidden w-10 h-10 object-contain shrink-0 dark:block"
             />
             {!sidebarCollapsed && (
               <div className="min-w-0 animate-in fade-in duration-200">
