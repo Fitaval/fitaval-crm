@@ -168,23 +168,6 @@ export function Dossier({ id, onClose }) {
             </p>
           </Card>
           <Card className="p-5">
-            <div className="mb-3 flex items-center justify-between">
-              <h4 className="text-sm font-semibold">Digital check-in QR code</h4>
-              <Badge tone="green">Live in app</Badge>
-            </div>
-            <div className="rounded-lg border border-zinc-200 bg-white p-4">
-              <QrCode value={tok} />
-              <p className="mt-2 text-center font-mono text-sm font-medium tabular-nums tracking-wider">{tok}</p>
-            </div>
-            <Btn className="mt-3 w-full" v="outline" disabled={!perms.freeze} onClick={rotate}>
-              <Icon n="RefreshCw" size={14} />
-              Reissue / Rotate QR Code
-            </Btn>
-            <p className="mt-2 text-[11px] text-zinc-500">
-              The old token stops working at the turnstile the moment a new one is issued.
-            </p>
-          </Card>
-          <Card className="p-5">
             <h4 className="mb-3 text-sm font-semibold">CRM interaction history</h4>
             <div className="mb-4 space-y-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
               <div className="grid grid-cols-2 gap-3">
@@ -315,7 +298,7 @@ export function UserManagement() {
   if (!perms.members)
     return (
       <div>
-        <PageHead title="User Management" sub="Members, QR codes and CRM history" />
+        <PageHead title="User Management" sub="Members and CRM history" />
         <Locked
           title="Member records are restricted"
           text="Trainers can see their own classes and rosters, but not the member directory. Switch the role preview to Front Desk Staff, Branch Manager or Super Admin to continue."
@@ -398,7 +381,7 @@ export function UserManagement() {
   ];
   return (
     <div>
-      <PageHead title="User Management" sub="Members, QR codes and CRM history">
+      <PageHead title="User Management" sub="Members and CRM history">
         {perms.exportMembers ? (
           <Btn v="dark" disabled={exporting} onClick={doExport}>
             <Icon

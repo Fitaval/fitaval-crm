@@ -1,14 +1,11 @@
-import { useState } from 'react';
 import { Icon } from '../../../components/Icon';
-import { Btn } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { Locked } from '../../../components/ui/PageHead';
 import { useApp } from '../../../context/AppContext';
 import { cx, inr, fmtDate } from '../../../lib/utils';
 
 export function GymWalletTab({ g }) {
-  const { perms, toast } = useApp();
-  const [settling, setSettling] = useState(false);
+  const { perms } = useApp();
 
   if (!perms.revenue)
     return (
@@ -18,168 +15,208 @@ export function GymWalletTab({ g }) {
       />
     );
 
-  const walletObj = g.wallet || {};
-  const walletTxns = Array.isArray(walletObj.txns) ? walletObj.txns : [];
-  const w = { status: 'Active', updated: '', ...walletObj, txns: walletTxns };
-  const earned = walletTxns.filter((t) => t.type === 'credit').reduce((a, t) => a + (Number(t.amount) || 0), 0);
-  const withdrawn = walletTxns.filter((t) => t.type === 'debit').reduce((a, t) => a + (Number(t.amount) || 0), 0);
-  const balance = earned - withdrawn;
+  const w = g.wallet || {};
+  const withdrawableBalance = Number(w.withdrawable_balance ?? g.wallet_balance ?? 0);
+  const pendingBalance = Number(w.pending_balance ?? 0);
+  const totalBalance = withdrawableBalance + pendingBalance;
+  const totalWithdrawn = Number(w.total_withdrawn ?? 0);
+  const totalEarned = Number(w.total_earned ?? totalBalance + totalWithdrawn);
+  const bank = w.bank_account || null;
+  const withdrawals = Array.isArray(w.withdrawals) ? w.withdrawals : [];
+  const walletTxns = Array.isArray(w.txns) ? w.txns : [];
 
-  const handleSettle = () => {
-    if (balance <= 0) {
-      toast({ title: 'No balance to settle', desc: 'Available balance is zero.' });
-      return;
-    }
-    setSettling(true);
-    setTimeout(() => {
-      setSettling(false);
-      toast({
-        title: 'Settlement initiated',
-        desc: `Transfer of ${inr(balance)} scheduled to registered bank account (T+2).`,
-      });
-    }, 600);
+  const isBankVerified = bank?.verification_status === 'verified';
+
+  const statusTone = (status) => {
+    const s = (status || '').toUpperCase();
+    if (s === 'SUCCESS') return 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30';
+    if (s === 'FAILED') return 'bg-red-500/15 text-red-400 border-red-500/30';
+    return 'bg-amber-500/15 text-amber-400 border-amber-500/30';
   };
-
-  const handleExport = () => {
-    toast({
-      title: 'Statement exported',
-      desc: `${g.name} wallet history downloaded as Excel.`,
-    });
-  };
-
-  const stats = [
-    {
-      label: 'Total Earned',
-      value: earned,
-      icon: 'TrendingUp',
-      bgTone: 'bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400',
-      badge: 'All-time gross',
-    },
-    {
-      label: 'Withdrawn / Settled',
-      value: withdrawn,
-      icon: 'Download',
-      bgTone: 'bg-red-500/10 text-red-600 dark:bg-red-500/20 dark:text-red-400',
-      badge: `${w.txns.filter((t) => t.type === 'debit').length} payouts`,
-    },
-  ];
 
   return (
     <div className="space-y-4">
-      {/* Available Balance Card */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-slate-900 p-6 text-white shadow-xl sm:p-7 border border-white/10">
-        {/* Glow effects */}
-        <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-emerald-500/20 blur-3xl"></div>
-        <div className="pointer-events-none absolute left-8 -bottom-10 h-36 w-36 rounded-full bg-emerald-500/10 blur-2xl"></div>
-
-        <div className="relative">
-          {/* Top header row */}
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/10 border border-white/15 text-white">
-                <Icon n="Wallet" size={20} />
+      {/* Top 2 Balance Cards (matching Gym CRM Wallet) */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* Card 1: Withdrawable Balance */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-slate-900 p-6 text-white shadow-xl border border-white/10">
+          <div className="pointer-events-none absolute -right-10 -top-10 h-44 w-44 rounded-full bg-emerald-500/20 blur-3xl" />
+          <div className="relative">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/10 border border-white/15 text-white">
+                  <Icon n="Wallet" size={18} />
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-emerald-400">
+                    Available Funds
+                  </p>
+                  <p className="text-sm font-semibold text-white">Withdrawable Balance</p>
+                </div>
               </div>
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-emerald-400">
-                  Fitaval Wallet · B2C Settlement
-                </p>
-                <p className="text-sm font-medium text-white/90">Available Balance</p>
-              </div>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/20 px-3 py-1 text-xs font-semibold text-emerald-300">
+                Cleared
+              </span>
             </div>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/20 px-3 py-1 text-xs font-semibold text-emerald-300">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              {w.status || 'Active'}
-            </span>
-          </div>
 
-          {/* Amount */}
-          <p className="mt-5 text-4xl sm:text-5xl font-extrabold tabular-nums tracking-tight text-white leading-none">
-            {inr(balance)}
-          </p>
-
-          <p className="mt-2 text-xs text-white/60">
-            Updated {w.updated || 'recently'} · Auto-settlement active for {g.name}
-          </p>
-
-          {/* Divider */}
-          <div className="my-5 border-t border-white/10" />
-
-          {/* Action buttons */}
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={handleSettle}
-              disabled={settling}
-              className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:opacity-60"
-            >
-              <Icon n={settling ? 'Loader2' : 'ArrowUpRight'} size={15} className={settling ? 'animate-spin' : ''} />
-              {settling ? 'Processing...' : 'Settle Payout'}
-            </button>
-            <button
-              onClick={handleExport}
-              className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/20"
-            >
-              <Icon n="FileSpreadsheet" size={15} />
-              Export History
-            </button>
+            <p className="mt-5 text-4xl font-extrabold tabular-nums tracking-tight text-white leading-none">
+              {inr(withdrawableBalance)}
+            </p>
+            <p className="mt-2 text-xs text-white/60 leading-relaxed">
+              Ready for immediate withdrawal to {g.name}&apos;s verified bank account.
+            </p>
           </div>
         </div>
-      </div>
 
-      {/* Stats cards */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        {stats.map((s) => (
-          <Card key={s.label} className="rounded-2xl p-5">
-            <div className="flex items-center justify-between">
-              <span className={cx('flex h-10 w-10 items-center justify-center rounded-xl', s.bgTone)}>
-                <Icon n={s.icon} size={18} />
+        {/* Card 2: Pending Balance (T+2) */}
+        <Card className="rounded-3xl p-6 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                  <Icon n="Clock" size={18} />
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-zinc-400">
+                    In Clearance
+                  </p>
+                  <p className="text-sm font-semibold">Pending Balance (T+2)</p>
+                </div>
+              </div>
+              <span className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/15 px-3 py-1 text-xs font-semibold text-amber-400">
+                T+2 Cycle
               </span>
-              <span className="text-[11px] font-medium text-zinc-400">{s.badge}</span>
             </div>
-            <p className="mt-3 text-xs text-zinc-500">{s.label}</p>
-            <p className="mt-0.5 text-xl font-bold tabular-nums text-zinc-950">{inr(s.value)}</p>
-          </Card>
-        ))}
+
+            <p className="text-4xl font-extrabold tabular-nums tracking-tight leading-none">
+              {inr(pendingBalance)}
+            </p>
+            <p className="mt-2 text-xs text-zinc-400 leading-relaxed">
+              Requested withdrawals currently in processing / 2-day bank settlement window.
+            </p>
+          </div>
+
+          <div className="pt-4 mt-4 border-t border-white/10 flex items-center justify-between text-xs text-zinc-400">
+            <span>Total Gym Balance:</span>
+            <span className="font-bold font-mono text-white">{inr(totalBalance)}</span>
+          </div>
+        </Card>
       </div>
 
-      {/* Transactions list */}
+      {/* Payout Bank Account Status */}
+      <Card className="rounded-2xl p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400">
+              <Icon n="Building" size={18} />
+            </span>
+            <div>
+              <p className="text-sm font-semibold">Payout Bank Account</p>
+              <p className="text-xs text-zinc-400">
+                {bank && bank.account_number_masked
+                  ? `${bank.bank_name || 'Bank'} · ${bank.account_number_masked} · ${bank.ifsc_code || ''}`
+                  : 'No verified bank account linked yet'}
+              </p>
+            </div>
+          </div>
+          <span
+            className={cx(
+              'rounded-full border px-3 py-1 text-xs font-semibold',
+              isBankVerified
+                ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+            )}
+          >
+            {isBankVerified ? 'Verified & Locked' : (bank?.verification_status || 'Not Initiated').replace(/_/g, ' ')}
+          </span>
+        </div>
+      </Card>
+
+      {/* Stats Summary (matching Gym CRM Wallet) */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Card className="rounded-2xl p-5">
+          <div className="flex items-center justify-between">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400">
+              <Icon n="TrendingUp" size={18} />
+            </span>
+            <span className="text-[11px] font-medium text-zinc-400">All-time net share</span>
+          </div>
+          <p className="mt-3 text-xs text-zinc-400">Total Revenue Share</p>
+          <p className="mt-0.5 text-xl font-bold tabular-nums">{inr(totalEarned)}</p>
+        </Card>
+
+        <Card className="rounded-2xl p-5">
+          <div className="flex items-center justify-between">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/10 text-red-400">
+              <Icon n="Download" size={18} />
+            </span>
+            <span className="text-[11px] font-medium text-zinc-400">
+              {withdrawals.filter((x) => x.status === 'SUCCESS').length} payouts
+            </span>
+          </div>
+          <p className="mt-3 text-xs text-zinc-400">Total Withdrawn to Date</p>
+          <p className="mt-0.5 text-xl font-bold tabular-nums">{inr(totalWithdrawn)}</p>
+        </Card>
+      </div>
+
+      {/* Withdrawal History */}
+      <Card className="rounded-2xl p-5 sm:p-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold">Withdrawal History</h2>
+          <span className="text-xs text-zinc-400 tabular-nums">{withdrawals.length} requests</span>
+        </div>
+        <ul className="mt-4 divide-y divide-white/10">
+          {withdrawals.map((req) => (
+            <li key={req.id} className="flex items-center justify-between gap-4 py-3.5">
+              <div>
+                <p className="text-sm font-medium">{inr(req.amount)}</p>
+                <p className="mt-0.5 text-xs text-zinc-400 tabular-nums">
+                  {fmtDate(req.date)} {req.bank_utr ? `· UTR: ${req.bank_utr}` : ''}
+                </p>
+              </div>
+              <span className={cx('rounded-full border px-2.5 py-0.5 text-[11px] font-semibold', statusTone(req.status))}>
+                {req.status}
+              </span>
+            </li>
+          ))}
+          {!withdrawals.length && (
+            <li className="py-6 text-center text-sm text-zinc-500">No withdrawal requests yet.</li>
+          )}
+        </ul>
+      </Card>
+
+      {/* Wallet Transactions */}
       <Card className="rounded-2xl p-5 sm:p-6">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold">Transaction History</h2>
-          <span className="text-xs text-zinc-400 tabular-nums">{w.txns.length} records</span>
+          <span className="text-xs text-zinc-400 tabular-nums">{walletTxns.length} records</span>
         </div>
-        <ul className="mt-4 divide-y divide-zinc-100">
-          {w.txns.map((t) => {
+        <ul className="mt-4 divide-y divide-white/10">
+          {walletTxns.map((t) => {
             const cr = t.type === 'credit';
             return (
               <li key={t.id} className="flex items-center gap-4 py-3.5">
                 <span
                   className={cx(
-                    'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl',
-                    cr
-                      ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
-                      : 'bg-red-100 text-red-600 dark:bg-red-950/40 dark:text-red-400'
+                    'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
+                    cr ? 'bg-emerald-500/15 text-emerald-400' : 'bg-red-500/15 text-red-400'
                   )}
                 >
                   <Icon n={cr ? 'ArrowDownLeft' : 'ArrowUpRight'} size={17} />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-zinc-950">{t.description}</p>
-                  <p className="mt-0.5 text-xs tabular-nums text-zinc-500">{fmtDate(t.date)}</p>
+                  <p className="text-sm font-medium">{t.description}</p>
+                  <p className="mt-0.5 text-xs tabular-nums text-zinc-400">{fmtDate(t.date)}</p>
                 </div>
-                <p
-                  className={cx(
-                    'shrink-0 text-sm font-semibold tabular-nums',
-                    cr ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
-                  )}
-                >
+                <p className={cx('shrink-0 text-sm font-semibold tabular-nums', cr ? 'text-emerald-400' : 'text-red-400')}>
                   {cr ? '+' : '-'}
                   {inr(t.amount)}
                 </p>
               </li>
             );
           })}
-          {!w.txns.length && (
-            <li className="py-8 text-center text-sm text-zinc-500">No wallet transactions yet.</li>
+          {!walletTxns.length && (
+            <li className="py-6 text-center text-sm text-zinc-500">No wallet transactions yet.</li>
           )}
         </ul>
       </Card>

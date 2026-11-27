@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ApprovalBadge } from '../../components/ApprovalBadge';
 import { DataTable } from '../../components/DataTable';
 import { Icon } from '../../components/Icon';
@@ -561,6 +561,24 @@ export function ReviewModal({ g, onClose, onDone }) {
 export function GymManagement() {
   const { perms, approvals, approvedN, openGym, gyms } = useApp();
   const [review, setReview] = useState(null);
+  const [platformRevenue, setPlatformRevenue] = useState(0);
+
+  useEffect(() => {
+    if (!perms.revenue) return;
+    let cancelled = false;
+    adminClient
+      .dashboard()
+      .then((res) => {
+        if (!cancelled && res) {
+          setPlatformRevenue(Number(res.total_commission ?? res.mrr ?? 0));
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [perms.revenue]);
+
   const isPend = (g) => {
     const s = (g?.status || '').toLowerCase().replace(/[\s_]+/g, '');
     return s === 'pending' || s === 'underreview';
@@ -574,7 +592,7 @@ export function GymManagement() {
     { label: 'Flagged Reviews', value: '0', icon: 'Flag', trend: '0%', down: false, period: 'Real-time' },
     {
       label: 'Revenue',
-      value: '₹0',
+      value: `₹${platformRevenue.toLocaleString('en-IN')}`,
       icon: 'IndianRupee',
       trend: 'Live',
       period: 'Real-time',
