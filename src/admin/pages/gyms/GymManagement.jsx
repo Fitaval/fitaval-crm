@@ -566,8 +566,8 @@ export function GymManagement() {
   useEffect(() => {
     if (!perms.revenue) return;
     let cancelled = false;
-    adminClient
-      .dashboard()
+    adminClient.dashboard
+      .get()
       .then((res) => {
         if (!cancelled && res) {
           setPlatformRevenue(Number(res.total_commission ?? res.mrr ?? 0));
