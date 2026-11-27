@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Sun, Moon } from 'lucide-react';
 import './portal.css';
 
 function resolveInitialDark() {
@@ -67,16 +66,6 @@ export default function AuthShell({ title, sub, children, footer }) {
     return () => mq.removeEventListener?.('change', onChange);
   }, []);
 
-  const toggleTheme = () => {
-    setIsDark((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem('fitaval_portal_theme', next ? 'dark' : 'light');
-      } catch {}
-      return next;
-    });
-  };
-
   const handleLinkClick = (e) => {
     const anchor = e.target.closest('a[href^="/"]');
     if (anchor && !e.defaultPrevented && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && anchor.target !== '_blank') {
@@ -98,10 +87,9 @@ export default function AuthShell({ title, sub, children, footer }) {
   return (
     <div className={`pt-root${isDark ? ' pt-dark' : ''}`} onClick={handleLinkClick} onKeyDown={handleEnterNav}>
       <aside className="pt-brand">
-        <div className="pt-logo" aria-hidden="true">
-          <img src="/fitaval_logo.png" alt="Fitaval Logo" />
+        <div className="pt-logo">
+          <img src="/fitaval-full-logo.png" alt="Fitaval" />
         </div>
-        <h1>Fitaval</h1>
         <p className="pt-tag">sign-in for gym owners.</p>
         <ul className="pt-points">
           <li><b>Gym owners</b> open the CRM: members, plans, finance, staff.</li>
@@ -109,17 +97,6 @@ export default function AuthShell({ title, sub, children, footer }) {
       </aside>
 
       <main className="pt-main">
-        <button
-          type="button"
-          className="pt-theme-btn"
-          onClick={toggleTheme}
-          aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-          title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-        >
-          {isDark ? <Sun size={14} /> : <Moon size={14} />}
-          <span>{isDark ? 'Light' : 'Dark'}</span>
-        </button>
-
         <div className="pt-card">
           <h2>{title}</h2>
           <p className="pt-sub">{sub}</p>

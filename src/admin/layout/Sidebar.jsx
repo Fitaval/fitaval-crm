@@ -49,7 +49,7 @@ export function NavBtn({ active, icon, label, onClick, child, collapsed, to }) {
 }
 
 export function Sidebar({ section, setSection, open, onClose, collapsed, onCollapse, onLogout }) {
-  const { roleObj } = useApp();
+  const { roleObj, dark } = useApp();
   const inGym =
     section === 'gym' ||
     section === 'plans' ||
@@ -79,14 +79,9 @@ export function Sidebar({ section, setSection, open, onClose, collapsed, onColla
       >
         <div className={cx('flex items-center gap-3 px-5 py-5', collapsed && 'lg:justify-center lg:px-0')}>
           <img
-            src="/fitaval-logo-light.png"
+            src={dark ? '/fitaval-logo-dark.png' : '/fitaval-logo-light.png'}
             alt="Fitaval Logo"
-            className="h-9 w-9 shrink-0 object-contain dark:hidden"
-          />
-          <img
-            src="/fitaval-logo-dark.png"
-            alt="Fitaval Logo"
-            className="hidden h-9 w-9 shrink-0 object-contain dark:block"
+            className="h-9 w-9 shrink-0 object-contain"
           />
           <div className={hide}>
             <p className="text-base font-bold leading-none tracking-tight text-foreground">Fitaval</p>
