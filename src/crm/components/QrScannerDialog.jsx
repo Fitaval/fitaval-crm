@@ -3,17 +3,17 @@ import { format } from "date-fns";
 import { Camera, CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { client } from "@/api/client";
-import { findMemberByQr, normalizeQr } from "@/lib/qr";
+import { normalizeQr } from "@/lib/qr";
 
 const RESCAN_LOCK_MS = 2500;
 
-/** Camera-only QR check-in scanner. */
+/** Camera-only QR check-in scanner verified server-side against /crm/checkins/. */
 export default function QrScannerDialog({ open, onOpenChange, members, onCheckedIn }) {
   const videoRef = useRef(null);
   const lockRef = useRef(0);
   const [camState, setCamState] = useState("idle"); // idle | starting | live | error
   const [camError, setCamError] = useState("");
-  const [result, setResult] = useState(null); // { kind, member?, code, time? }
+  const [result, setResult] = useState(null); // { kind, member?, code, time?, message? }
 
   const handleCode = useCallback(
     async (raw) => {
@@ -21,36 +21,78 @@ export default function QrScannerDialog({ open, onOpenChange, members, onChecked
       if (!code || Date.now() < lockRef.current) return;
       lockRef.current = Date.now() + RESCAN_LOCK_MS;
 
-      const member = findMemberByQr(members, code);
-      if (!member) {
-        setResult({ kind: "unknown", code });
-        return;
-      }
-      const today = format(new Date(), "yyyy-MM-dd");
-      const existing = await client.entities.MemberCheckin.list("-created_at", 500);
-      const already = existing.find((c) => c.member_id === member.id && c.date === today);
-      const expired = member.expiry_date && new Date(member.expiry_date) < new Date();
-      const blocked = expired || member.status === "inactive";
+      try {
+        const res = await client.entities.MemberCheckin.create({ qr_token: code });
+        const matched =
+          members?.find((m) => String(m.id) === String(res.member_id)) || {
+            id: res.member_id,
+            name: res.member_name || "Member",
+            plan_name: res.plan_name || "Active Plan",
+          };
 
-      if (already) {
-        setResult({ kind: "duplicate", member, code, time: already.time });
-        return;
+        setResult({
+          kind: "ok",
+          member: {
+            ...matched,
+            name: res.member_name || matched.name,
+            plan_name: res.plan_name || matched.plan_name,
+          },
+          code,
+          time: res.time || format(new Date(), "hh:mm a"),
+        });
+        onCheckedIn?.(matched);
+      } catch (err) {
+        const payload = err?.data || err?.response?.data || {};
+        const errorCode = payload.error || "";
+        const memberName = payload.member_name;
+        const planName = payload.plan_name;
+        const member = memberName
+          ? { name: memberName, plan_name: planName || "", expiry_date: payload.end_date }
+          : null;
+
+        if (errorCode === "already_checked_in") {
+          setResult({
+            kind: "duplicate",
+            member,
+            code,
+            time: payload.time || "",
+            message: payload.message,
+          });
+          return;
+        }
+        if (errorCode === "subscription_finished" || errorCode === "membership_expired") {
+          setResult({
+            kind: "expired",
+            member,
+            code,
+            message: payload.message || "Subscription finished. QR expired.",
+          });
+          return;
+        }
+        if (errorCode === "not_started") {
+          setResult({
+            kind: "not_started",
+            member,
+            code,
+            message: payload.message || "Subscription has not started yet.",
+          });
+          return;
+        }
+        if (errorCode === "wrong_gym") {
+          setResult({
+            kind: "wrong_gym",
+            code,
+            message: payload.message || "This pass belongs to another gym.",
+          });
+          return;
+        }
+
+        setResult({
+          kind: "unknown",
+          code,
+          message: payload.message || "QR code not recognised.",
+        });
       }
-      if (blocked) {
-        setResult({ kind: "expired", member, code });
-        return;
-      }
-      const time = format(new Date(), "hh:mm a");
-      await client.entities.MemberCheckin.create({
-        member_id: member.id,
-        member_name: member.name,
-        plan_name: member.plan_name || "",
-        date: today,
-        time,
-        created_at: new Date().toISOString(),
-      });
-      setResult({ kind: "ok", member, code, time });
-      onCheckedIn?.(member);
     },
     [members, onCheckedIn]
   );
@@ -135,7 +177,9 @@ export default function QrScannerDialog({ open, onOpenChange, members, onChecked
   const tone = {
     ok: { Icon: CheckCircle2, box: "border-emerald-500/30 bg-emerald-500/10", text: "text-emerald-600 dark:text-emerald-400", title: "Checked in" },
     duplicate: { Icon: AlertTriangle, box: "border-amber-500/30 bg-amber-500/10", text: "text-amber-600 dark:text-amber-400", title: "Already checked in today" },
-    expired: { Icon: XCircle, box: "border-red-500/30 bg-red-500/10", text: "text-red-600 dark:text-red-400", title: "Membership expired" },
+    expired: { Icon: XCircle, box: "border-red-500/30 bg-red-500/10", text: "text-red-600 dark:text-red-400", title: "Subscription finished" },
+    not_started: { Icon: AlertTriangle, box: "border-amber-500/30 bg-amber-500/10", text: "text-amber-600 dark:text-amber-400", title: "Subscription not active yet" },
+    wrong_gym: { Icon: XCircle, box: "border-red-500/30 bg-red-500/10", text: "text-red-600 dark:text-red-400", title: "Not valid at this gym" },
     unknown: { Icon: XCircle, box: "border-red-500/30 bg-red-500/10", text: "text-red-600 dark:text-red-400", title: "QR code not recognised" },
   }[result?.kind || "unknown"];
 
@@ -144,7 +188,7 @@ export default function QrScannerDialog({ open, onOpenChange, members, onChecked
       <DialogContent className="max-w-md max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Scan check-in QR code</DialogTitle>
-          <DialogDescription>Point the camera at a member's QR code.</DialogDescription>
+          <DialogDescription>Point the camera at a member's active booking QR code.</DialogDescription>
         </DialogHeader>
 
         <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-slate-950">
@@ -174,14 +218,19 @@ export default function QrScannerDialog({ open, onOpenChange, members, onChecked
                 <p className="font-semibold">{result.member.name}</p>
                 <p className="text-xs text-muted-foreground">
                   {result.member.plan_name || "No plan"}
-                  {result.kind === "ok" && ` · ${result.time}`}
-                  {result.kind === "duplicate" && ` · first scan ${result.time}`}
+                  {result.kind === "ok" && result.time && ` · ${result.time}`}
+                  {result.kind === "duplicate" && result.time && ` · first scan ${result.time}`}
                   {result.kind === "expired" && result.member.expiry_date &&
-                    ` · expired ${format(new Date(result.member.expiry_date), "dd MMM yyyy")}`}
+                    ` · finished ${format(new Date(result.member.expiry_date), "dd MMM yyyy")}`}
                 </p>
+                {result.message && result.kind !== "ok" && (
+                  <p className="mt-1 text-xs text-muted-foreground">{result.message}</p>
+                )}
               </div>
             ) : (
-              <p className="mt-1.5 break-all font-mono text-xs text-muted-foreground">{result.code}</p>
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                {result.message || result.code}
+              </p>
             )}
           </div>
         )}
