@@ -215,7 +215,7 @@ export default function Wallet() {
               ₹{pendingBalance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
             <p className="text-muted-foreground text-xs mt-2 leading-relaxed">
-              Recent membership sales awaiting standard 2-day settlement window before moving to Withdrawable Balance.
+              Requested withdrawals currently in processing / 2-day bank settlement window.
             </p>
           </div>
 

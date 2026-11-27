@@ -86,19 +86,24 @@ export default function ReversePennyDropWidget({ bankAccount, onAccountUpdated }
       pollIntervalRef.current = setInterval(async () => {
         try {
           const statusRes = await client.bankAccount.rpdStatus();
-          if (statusRes.status === "SUCCESS") {
+          const vStatus = (statusRes.verification_status || "").toLowerCase();
+          if (statusRes.status === "SUCCESS" || vStatus === "verified" || vStatus === "needs_admin_review") {
             clearInterval(pollIntervalRef.current);
             clearInterval(timerIntervalRef.current);
             setVerifyingStatus("success");
             setTimeout(() => {
               setDialogOpen(false);
-              onAccountUpdated?.(statusRes.bank_account);
+              onAccountUpdated?.(statusRes.bank_account || statusRes);
             }, 1800);
-          } else if (statusRes.status === "FAILED") {
+          } else if (statusRes.status === "FAILED" || vStatus === "failed") {
             clearInterval(pollIntervalRef.current);
             clearInterval(timerIntervalRef.current);
             setVerifyingStatus("failed");
-            setPollError(statusRes.bank_account?.failure_reason || "Verification payment failed or was declined.");
+            setPollError(
+              statusRes.bank_account?.failure_reason ||
+                statusRes.failure_reason ||
+                "Verification payment failed or was declined."
+            );
           }
         } catch (e) {
           console.warn("Error polling RPD status", e);
@@ -287,6 +292,13 @@ export default function ReversePennyDropWidget({ bankAccount, onAccountUpdated }
           )}
         </Button>
       </div>
+
+      {pollError && !dialogOpen && (
+        <div className="rounded-xl bg-destructive/10 border border-destructive/20 p-3 mb-4 flex items-center gap-3 text-xs text-destructive">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          <span>{pollError}</span>
+        </div>
+      )}
 
       {isFailed && (
         <div className="rounded-xl bg-destructive/10 border border-destructive/20 p-3 mb-4 flex items-center gap-3 text-xs text-destructive">
