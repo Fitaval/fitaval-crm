@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Outlet, NavLink, Link, useLocation } from "react-router-dom";
 import {
   Bell,
@@ -29,7 +29,34 @@ export default function Layout() {
   const location = useLocation();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [profile, setProfile] = useState(null);
+  const [logoError, setLogoError] = useState(false);
   const notificationState = useNotifications();
+
+  useEffect(() => {
+    let cancelled = false;
+    client.entities.GymProfile.list("-created_date", 1)
+      .then((list) => {
+        if (!cancelled && Array.isArray(list) && list.length > 0) {
+          setProfile(list[0]);
+          setLogoError(false);
+        }
+      })
+      .catch(() => {});
+
+    const handleProfileUpdated = (e) => {
+      if (e?.detail) {
+        setProfile(e.detail);
+        setLogoError(false);
+      }
+    };
+
+    window.addEventListener("fitaval-profile-updated", handleProfileUpdated);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("fitaval-profile-updated", handleProfileUpdated);
+    };
+  }, []);
 
   // Sidebar collapse state with persistent storage
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -105,9 +132,14 @@ export default function Layout() {
             title="Fitaval Gym CRM"
           >
             <img
-              src="/fitaval_logo.png"
+              src="/fitaval-logo-light.png"
               alt="Fitaval Logo"
-              className="w-9 h-9 rounded-xl object-contain p-1 shrink-0 bg-primary/10 border border-primary/20 shadow-xs"
+              className="w-9 h-9 object-contain shrink-0 dark:hidden"
+            />
+            <img
+              src="/fitaval-logo-dark.png"
+              alt="Fitaval Logo"
+              className="hidden w-9 h-9 object-contain shrink-0 dark:block"
             />
             {!sidebarCollapsed && (
               <div className="min-w-0 animate-in fade-in duration-200">
@@ -231,15 +263,43 @@ export default function Layout() {
               <Link
                 to="/settings"
                 title="Settings & Profile"
-                className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold hover:opacity-90 transition-opacity shadow-sm"
+                className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold hover:opacity-90 transition-opacity shadow-sm overflow-hidden shrink-0"
               >
-                {(getSession()?.owner_name || getSession()?.user?.owner_name || getSession()?.name || getSession()?.user?.name || "Gym Owner")
-                  .split(" ")
-                  .map((w) => w[0])
-                  .filter(Boolean)
-                  .join("")
-                  .toUpperCase()
-                  .slice(0, 2) || "GY"}
+                {(() => {
+                  const session = getSession();
+                  const ownerName =
+                    profile?.owner_name ||
+                    session?.owner_name ||
+                    session?.user?.owner_name ||
+                    session?.name ||
+                    session?.user?.name ||
+                    "Gym Owner";
+                  const logoUrl =
+                    profile?.logo_url ||
+                    session?.logo_url ||
+                    session?.user?.logo_url ||
+                    "";
+                  const initials =
+                    ownerName
+                      .split(" ")
+                      .map((w) => w[0])
+                      .filter(Boolean)
+                      .join("")
+                      .toUpperCase()
+                      .slice(0, 2) || "GY";
+
+                  if (logoUrl && !logoError) {
+                    return (
+                      <img
+                        src={logoUrl}
+                        alt={ownerName}
+                        onError={() => setLogoError(true)}
+                        className="w-full h-full object-cover"
+                      />
+                    );
+                  }
+                  return initials;
+                })()}
               </Link>
             </div>
           </div>

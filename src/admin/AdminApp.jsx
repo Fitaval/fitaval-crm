@@ -21,6 +21,7 @@ import { CommissionManagement } from './pages/commissions/CommissionManagement';
 import { WithdrawalManagement } from './pages/withdrawals/WithdrawalManagement';
 import { GymDetail } from './pages/gyms/detail/GymDetail';
 import { UserManagement } from './pages/users/UserManagement';
+import { FeedbackManagement } from './pages/feedback/FeedbackManagement';
 import { logout, getSession, startSession } from '../portal/session';
 import { adminClient } from './api/client';
 import { httpClient } from '../shared/api/httpClient';
@@ -47,6 +48,7 @@ function AdminAppContent() {
     if (p === '/admin/withdrawals' || p === '/admin/withdrawal') return 'withdrawals';
     if (p === '/admin/plans' || p === '/admin/subscriptions' || p === '/admin/subscription-plans') return 'plans';
     if (p === '/admin/users' || p === '/admin/members') return 'users';
+    if (p === '/admin/feedback') return 'feedback';
     if (p === '/admin/account' || p === '/admin/accounts' || p === '/admin/profile') return 'account';
     return 'dashboard';
   }, [location.pathname]);
@@ -62,6 +64,7 @@ function AdminAppContent() {
     else if (id === 'withdrawals') navigate('/admin/withdrawals');
     else if (id === 'plans') navigate('/admin/plans');
     else if (id === 'users') navigate('/admin/users');
+    else if (id === 'feedback') navigate('/admin/feedback');
     else if (id === 'account' || id === 'accounts') navigate('/admin/account');
     else navigate('/admin/dashboard');
   };
@@ -563,6 +566,7 @@ function AdminAppContent() {
               <Route path="/admin/commission" element={<Navigate to="/admin/commissions" replace />} />
               <Route path="/admin/withdrawals" element={<WithdrawalManagement />} />
               <Route path="/admin/withdrawal" element={<Navigate to="/admin/withdrawals" replace />} />
+              <Route path="/admin/feedback" element={<FeedbackManagement />} />
               <Route path="/admin/plans" element={<SubscriptionPlans />} />
               <Route path="/admin/subscriptions" element={<Navigate to="/admin/plans" replace />} />
               <Route path="/admin/subscription-plans" element={<Navigate to="/admin/plans" replace />} />

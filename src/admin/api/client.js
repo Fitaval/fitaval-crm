@@ -251,6 +251,13 @@ export const adminClient = {
     },
   },
 
+  // 11. App User Feedback
+  feedback: {
+    async list() {
+      return apiRequest('/admin/feedback/');
+    },
+  },
+
   // 11. Dynamic Commission Management
   commissions: {
     async list(params = {}) {

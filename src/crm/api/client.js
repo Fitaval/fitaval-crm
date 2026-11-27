@@ -151,6 +151,18 @@ export const client = {
     },
   },
 
+  feedback: {
+    async list() {
+      return await apiRequest('/crm/feedback/');
+    },
+    async submit(payload) {
+      return await apiRequest('/crm/feedback/', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    },
+  },
+
   auth: {
     async me() {
       const session = getSession();

@@ -79,9 +79,14 @@ export function Sidebar({ section, setSection, open, onClose, collapsed, onColla
       >
         <div className={cx('flex items-center gap-3 px-5 py-5', collapsed && 'lg:justify-center lg:px-0')}>
           <img
-            src="/fitaval_logo.png"
+            src="/fitaval-logo-light.png"
             alt="Fitaval Logo"
-            className="h-9 w-9 shrink-0 rounded-xl object-contain p-1 bg-primary/10 border border-primary/20 shadow-xs"
+            className="h-9 w-9 shrink-0 object-contain dark:hidden"
+          />
+          <img
+            src="/fitaval-logo-dark.png"
+            alt="Fitaval Logo"
+            className="hidden h-9 w-9 shrink-0 object-contain dark:block"
           />
           <div className={hide}>
             <p className="text-base font-bold leading-none tracking-tight text-foreground">Fitaval</p>

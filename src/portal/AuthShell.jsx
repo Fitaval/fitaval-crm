@@ -1,5 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Sun, Moon } from 'lucide-react';
 import './portal.css';
+
+function resolveInitialDark() {
+  try {
+    const returnTo = new URLSearchParams(window.location.search).get('returnTo') || '';
+    const portalSaved = localStorage.getItem('fitaval_portal_theme');
+    const appSaved = returnTo.startsWith('/admin')
+      ? localStorage.getItem('fitaval_admin_theme') || localStorage.getItem('fitaval_theme')
+      : localStorage.getItem('fitaval_theme') || localStorage.getItem('fitaval_admin_theme');
+    const pref = portalSaved || appSaved || 'system';
+    if (pref === 'dark') return true;
+    if (pref === 'light') return false;
+  } catch {}
+  return typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+}
 
 function handleEnterNav(e) {
   if (e.key !== 'Enter' || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -31,6 +46,37 @@ function handleEnterNav(e) {
 
 // Shared look for every sign-in page (login, create account, forgot / reset password).
 export default function AuthShell({ title, sub, children, footer }) {
+  const [isDark, setIsDark] = useState(resolveInitialDark);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', isDark);
+    document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+  }, [isDark]);
+
+  useEffect(() => {
+    const mq = window.matchMedia?.('(prefers-color-scheme: dark)');
+    if (!mq) return;
+    const onChange = (e) => {
+      try {
+        const portalSaved = localStorage.getItem('fitaval_portal_theme');
+        if (portalSaved === 'dark' || portalSaved === 'light') return;
+      } catch {}
+      setIsDark(e.matches);
+    };
+    mq.addEventListener?.('change', onChange);
+    return () => mq.removeEventListener?.('change', onChange);
+  }, []);
+
+  const toggleTheme = () => {
+    setIsDark((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('fitaval_portal_theme', next ? 'dark' : 'light');
+      } catch {}
+      return next;
+    });
+  };
+
   const handleLinkClick = (e) => {
     const anchor = e.target.closest('a[href^="/"]');
     if (anchor && !e.defaultPrevented && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && anchor.target !== '_blank') {
@@ -50,7 +96,7 @@ export default function AuthShell({ title, sub, children, footer }) {
   };
 
   return (
-    <div className="pt-root" onClick={handleLinkClick} onKeyDown={handleEnterNav}>
+    <div className={`pt-root${isDark ? ' pt-dark' : ''}`} onClick={handleLinkClick} onKeyDown={handleEnterNav}>
       <aside className="pt-brand">
         <div className="pt-logo" aria-hidden="true">
           <img src="/fitaval_logo.png" alt="Fitaval Logo" />
@@ -63,6 +109,17 @@ export default function AuthShell({ title, sub, children, footer }) {
       </aside>
 
       <main className="pt-main">
+        <button
+          type="button"
+          className="pt-theme-btn"
+          onClick={toggleTheme}
+          aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+          title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {isDark ? <Sun size={14} /> : <Moon size={14} />}
+          <span>{isDark ? 'Light' : 'Dark'}</span>
+        </button>
+
         <div className="pt-card">
           <h2>{title}</h2>
           <p className="pt-sub">{sub}</p>

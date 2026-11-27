@@ -270,6 +270,7 @@ export default function GymProfilePage() {
         gallery: updatedGallery,
         amenities: saved?.amenities || prev.amenities || [],
       }));
+      window.dispatchEvent(new CustomEvent("fitaval-profile-updated", { detail: mergedProfile }));
       setEditPanelOpen(false);
 
       toast({

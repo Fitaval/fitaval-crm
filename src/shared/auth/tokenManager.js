@@ -12,6 +12,7 @@ const STORAGE_KEYS = {
   SESSION: 'fitaval_session',
   REFRESH_TOKEN: 'fitaval_refresh_token',
 };
+const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days (1 month)
 
 // In-memory access token cache (primary safeguard against localStorage XSS)
 let memoryAccessToken = null;
@@ -46,9 +47,13 @@ export const tokenManager = {
   getAccessToken() {
     if (memoryAccessToken) return memoryAccessToken;
     try {
-      const raw = ss()?.getItem(STORAGE_KEYS.SESSION);
+      const raw = ls()?.getItem(STORAGE_KEYS.SESSION) || ss()?.getItem(STORAGE_KEYS.SESSION);
       if (raw) {
         const parsed = JSON.parse(raw);
+        if (parsed?.expiresAt && Date.now() > parsed.expiresAt) {
+          this.clearSession();
+          return null;
+        }
         if (parsed?.token) {
           memoryAccessToken = parsed.token;
           return memoryAccessToken;
@@ -63,11 +68,11 @@ export const tokenManager = {
   setAccessToken(token) {
     memoryAccessToken = token;
     try {
-      const raw = ss()?.getItem(STORAGE_KEYS.SESSION);
+      const raw = ls()?.getItem(STORAGE_KEYS.SESSION) || ss()?.getItem(STORAGE_KEYS.SESSION);
       if (raw) {
         const session = JSON.parse(raw);
         session.token = token;
-        ss()?.setItem(STORAGE_KEYS.SESSION, JSON.stringify(session));
+        ls()?.setItem(STORAGE_KEYS.SESSION, JSON.stringify(session));
       }
     } catch {
       /* ignore */
@@ -103,9 +108,13 @@ export const tokenManager = {
 
   getSession() {
     try {
-      const raw = ss()?.getItem(STORAGE_KEYS.SESSION);
+      const raw = ls()?.getItem(STORAGE_KEYS.SESSION) || ss()?.getItem(STORAGE_KEYS.SESSION);
       if (raw) {
         const session = JSON.parse(raw);
+        if (session?.expiresAt && Date.now() > session.expiresAt) {
+          this.clearSession();
+          return null;
+        }
         if (memoryAccessToken) {
           session.token = memoryAccessToken;
         }
@@ -122,18 +131,23 @@ export const tokenManager = {
       this.clearSession();
       return;
     }
-    memoryAccessToken = session.token || null;
+    const persistedSession = {
+      ...session,
+      expiresAt: session.expiresAt || Date.now() + SESSION_TTL_MS,
+    };
+    memoryAccessToken = persistedSession.token || null;
     if (refreshToken) {
       this.setRefreshToken(refreshToken);
     }
 
     try {
-      ss()?.setItem(STORAGE_KEYS.SESSION, JSON.stringify(session));
+      ls()?.setItem(STORAGE_KEYS.SESSION, JSON.stringify(persistedSession));
+      ss()?.removeItem(STORAGE_KEYS.SESSION);
     } catch {
       /* ignore */
     }
 
-    notifyListeners('login', session);
+    notifyListeners('login', persistedSession);
   },
 
   clearSession() {
@@ -141,6 +155,7 @@ export const tokenManager = {
     memoryRefreshToken = null;
     try {
       ss()?.removeItem(STORAGE_KEYS.SESSION);
+      ls()?.removeItem(STORAGE_KEYS.SESSION);
       ls()?.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
     } catch {
       /* ignore */

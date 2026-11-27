@@ -16,9 +16,14 @@ export function Header({ onMenu, onBell, collapsed, onCollapse }) {
           <Icon n="Menu" />
         </Btn>
         <img
-          src="/fitaval_logo.png"
+          src="/fitaval-logo-light.png"
           alt="Fitaval"
-          className="h-8 w-8 rounded-lg object-contain p-1 bg-primary/10 border border-primary/20 lg:hidden shrink-0 shadow-xs"
+          className="h-8 w-8 object-contain lg:hidden shrink-0 dark:hidden"
+        />
+        <img
+          src="/fitaval-logo-dark.png"
+          alt="Fitaval"
+          className="hidden h-8 w-8 object-contain lg:hidden shrink-0 dark:block"
         />
         <Btn
           v="outline"

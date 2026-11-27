@@ -33,6 +33,7 @@ export function GymDetail({ routeGymId }) {
 
   const [modal, setModal] = useState(null);
   const [review, setReview] = useState(false);
+  const [logoPreview, setLogoPreview] = useState(false);
   const localVerified = useVerified(gymId);
   const verified = Boolean(gym?.is_verified ?? gym?.verified ?? localVerified);
 
@@ -164,7 +165,13 @@ export function GymDetail({ routeGymId }) {
           </div>
         </div>
         <div className="flex flex-col items-center text-center">
-          <LogoTile name={g.name} logoUrl={g.logo_url} />
+          <div
+            onClick={() => g.logo_url && setLogoPreview(true)}
+            className={g.logo_url ? 'cursor-pointer transition-transform hover:scale-105' : ''}
+            title={g.logo_url ? 'Click to view logo' : undefined}
+          >
+            <LogoTile name={g.name} logoUrl={g.logo_url} />
+          </div>
           <h1 className="mt-3 inline-flex items-center gap-1.5 text-xl font-semibold tracking-tight">
             {g.name}
             {verified && <VerifiedTick size={20} />}
@@ -219,6 +226,28 @@ export function GymDetail({ routeGymId }) {
       {modal === 'location' && <LocationModal g={g} onClose={() => setModal(null)} />}
       {modal === 'photos' && <PhotosModal g={g} onClose={() => setModal(null)} />}
       {review && ap && <ReviewModal g={ap} onClose={() => setReview(false)} onDone={() => setSection('gym')} />}
+      {logoPreview && g.logo_url && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4"
+          onClick={() => setLogoPreview(false)}
+        >
+          <div className="relative max-h-[90vh] max-w-2xl" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setLogoPreview(false)}
+              className="absolute -right-2 -top-2 flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-white border border-white/20 hover:bg-zinc-800"
+              aria-label="Close logo preview"
+            >
+              <Icon n="X" size={16} />
+            </button>
+            <img
+              src={g.logo_url}
+              alt={`${g.name} logo`}
+              className="max-h-[80vh] max-w-full rounded-xl object-contain"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

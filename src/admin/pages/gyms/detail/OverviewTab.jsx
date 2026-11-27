@@ -12,6 +12,7 @@ export function OverviewTab({ g }) {
   const [sf, setSf] = useState('all');
   const [editingNote, setEditingNote] = useState(false);
   const [noteVal, setNoteVal] = useState(() => g?.internal_note || '');
+  const [previewPhoto, setPreviewPhoto] = useState(null);
   const rawFac = Array.isArray(g?.facilities) ? g.facilities : [];
   const rawSvc = Array.isArray(g?.services) ? g.services : [];
 
@@ -198,16 +199,52 @@ export function OverviewTab({ g }) {
           icon="MapPin"
           title="Gym location"
         >
-          <p className="mb-3 text-sm font-semibold">
-            {[g?.addr || g?.address, g?.loc || g?.city].filter(Boolean).join(', ') || 'Location not set'}
-          </p>
-          {(g?.lat || g?.latitude) && (g?.lng || g?.longitude) ? (
-            <MapView lat={g?.lat || g?.latitude} lng={g?.lng || g?.longitude} />
-          ) : (
-            <div className="flex h-48 items-center justify-center rounded-xl bg-zinc-50 text-xs text-zinc-400 dark:bg-zinc-800/50">
-              Map coordinates not set
-            </div>
-          )}
+          {(() => {
+            const fullAddr = [g?.addr || g?.address, g?.loc || g?.city].filter(Boolean).join(', ');
+            const lat = g?.lat || g?.latitude;
+            const lng = g?.lng || g?.longitude;
+            const mapsQuery = lat && lng ? `${lat},${lng}` : fullAddr;
+            const mapsUrl = mapsQuery
+              ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery)}`
+              : null;
+            return (
+              <>
+                <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+                  <p className="text-sm font-semibold flex-1 min-w-0">
+                    {fullAddr || 'Location not set'}
+                  </p>
+                  {mapsUrl && (
+                    <a
+                      href={mapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-500 hover:bg-emerald-500/20"
+                    >
+                      <Icon n="ExternalLink" size={12} />
+                      Open Map
+                    </a>
+                  )}
+                </div>
+                {lat && lng ? (
+                  <MapView lat={lat} lng={lng} />
+                ) : (
+                  <div className="flex h-48 flex-col items-center justify-center gap-2 rounded-xl bg-zinc-50 text-xs text-zinc-400 dark:bg-zinc-800/50">
+                    <span>Map coordinates not set</span>
+                    {mapsUrl && (
+                      <a
+                        href={mapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-emerald-500 hover:underline font-medium"
+                      >
+                        View address in Google Maps →
+                      </a>
+                    )}
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </Section>
       </div>
       <div className="lg:col-span-2">
@@ -218,18 +255,27 @@ export function OverviewTab({ g }) {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {photosList.map((p, idx) => {
               const photoSrc = typeof p === 'string' ? p : (p?.src || p?.url || (p?.kind === 'upload' ? p?.src : null));
+              const caption = p?.name || (p?.scene ? SCENES[p.scene] : 'Gym photo');
               return (
                 <figure
                   key={p?.id || idx}
-                  className="relative aspect-[4/3] overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100"
+                  onClick={() => photoSrc && setPreviewPhoto({ src: photoSrc, caption })}
+                  className={cx(
+                    'relative aspect-[4/3] overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100',
+                    photoSrc && 'cursor-pointer group'
+                  )}
                 >
                   {photoSrc ? (
-                    <img src={photoSrc} alt={p?.name || 'Gym photo'} className="h-full w-full object-cover" />
+                    <img
+                      src={photoSrc}
+                      alt={caption}
+                      className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                    />
                   ) : (
                     <GymScene kind={p?.scene} />
                   )}
                   <figcaption className="absolute bottom-2 left-2 rounded bg-zinc-950/85 px-2 py-0.5 text-[11px] font-medium text-white">
-                    {p?.name || (p?.scene ? SCENES[p.scene] : 'Gym photo')}
+                    {caption}
                   </figcaption>
                 </figure>
               );
@@ -240,6 +286,31 @@ export function OverviewTab({ g }) {
           )}
         </Section>
       </div>
+      {previewPhoto && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4"
+          onClick={() => setPreviewPhoto(null)}
+        >
+          <div className="relative max-h-[90vh] max-w-4xl" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setPreviewPhoto(null)}
+              className="absolute -right-2 -top-2 flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-white border border-white/20 hover:bg-zinc-800"
+              aria-label="Close preview"
+            >
+              <Icon n="X" size={16} />
+            </button>
+            <img
+              src={previewPhoto.src}
+              alt={previewPhoto.caption}
+              className="max-h-[82vh] max-w-full rounded-xl object-contain"
+            />
+            {previewPhoto.caption && (
+              <p className="mt-2 text-center text-sm font-medium text-white">{previewPhoto.caption}</p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

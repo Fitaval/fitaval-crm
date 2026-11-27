@@ -9,6 +9,7 @@ export const NAV_GYM = [
 
 export const NAV_REST = [
   { id: 'users', label: 'User Management', icon: 'Users', path: '/admin/users' },
+  { id: 'feedback', label: 'Feedback & Ratings', icon: 'MessageSquare', path: '/admin/feedback' },
   { id: 'account', label: 'Profile & Accounts', icon: 'UserCog', path: '/admin/account' },
 ];
 
@@ -20,5 +21,6 @@ export const SEC_TITLE = {
   withdrawals: 'Withdrawals Monitoring',
   plans: 'Subscription Plans',
   users: 'User Management',
+  feedback: 'Feedback & Ratings',
   account: 'Profile & Accounts',
 };
