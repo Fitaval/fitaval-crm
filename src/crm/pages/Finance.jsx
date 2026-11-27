@@ -74,21 +74,23 @@ export default function Finance() {
 
   const filteredTx = useMemo(() => {
     const now = new Date();
-    let start, end;
+    const todayStr = format(now, "yyyy-MM-dd");
     if (range === "today") {
-      start = end = now;
-    } else if (range === "week") {
-      start = subDays(now, 7);
-      end = now;
+      return transactions.filter((t) => format(new Date(t.date), "yyyy-MM-dd") === todayStr);
+    }
+    let startStr, endStr;
+    if (range === "week") {
+      startStr = format(subDays(now, 6), "yyyy-MM-dd");
+      endStr = todayStr;
     } else if (range === "month") {
-      start = startOfMonth(now);
-      end = endOfMonth(now);
+      startStr = format(startOfMonth(now), "yyyy-MM-dd");
+      endStr = format(endOfMonth(now), "yyyy-MM-dd");
     } else {
       return transactions;
     }
     return transactions.filter((t) => {
-      const d = new Date(t.date);
-      return d >= start && d <= end;
+      const ds = format(new Date(t.date), "yyyy-MM-dd");
+      return ds >= startStr && ds <= endStr;
     });
   }, [transactions, range]);
 
@@ -103,19 +105,67 @@ export default function Finance() {
     return filteredTx.filter((t) => t.type === tab);
   }, [filteredTx, tab]);
 
+  const chartTitle = useMemo(() => {
+    if (range === "today") return "Today Overview";
+    if (range === "week") return "7-Day Overview";
+    if (range === "month") return "This Month Overview";
+    return "All-Time Overview";
+  }, [range]);
+
   const chartData = useMemo(() => {
-    const days = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = subDays(new Date(), i);
-      const dayTx = transactions.filter((t) => format(new Date(t.date), "yyyy-MM-dd") === format(d, "yyyy-MM-dd"));
-      days.push({
-        day: format(d, "EEE"),
-        income: dayTx.filter((t) => t.type === "income").reduce((s, t) => s + (Number(t.amount) || 0), 0),
-        expense: dayTx.filter((t) => t.type === "expense").reduce((s, t) => s + (Number(t.amount) || 0), 0),
-      });
+    const now = new Date();
+    const calcBucket = (list) => ({
+      income: tab === "expense" ? 0 : list.filter((t) => t.type === "income").reduce((s, t) => s + (Number(t.amount) || 0), 0),
+      expense: tab === "income" ? 0 : list.filter((t) => t.type === "expense").reduce((s, t) => s + (Number(t.amount) || 0), 0),
+    });
+
+    if (range === "today") {
+      const todayStr = format(now, "yyyy-MM-dd");
+      const dayTx = displayTx.filter((t) => format(new Date(t.date), "yyyy-MM-dd") === todayStr);
+      return [{ day: format(now, "dd MMM"), ...calcBucket(dayTx) }];
     }
-    return days;
-  }, [transactions]);
+
+    if (range === "week") {
+      const days = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = subDays(now, i);
+        const ds = format(d, "yyyy-MM-dd");
+        const dayTx = displayTx.filter((t) => format(new Date(t.date), "yyyy-MM-dd") === ds);
+        days.push({ day: format(d, "EEE"), ...calcBucket(dayTx) });
+      }
+      return days;
+    }
+
+    if (range === "month") {
+      const mStart = startOfMonth(now);
+      const mEnd = endOfMonth(now);
+      const totalDays = mEnd.getDate();
+      const days = [];
+      for (let dayNum = 1; dayNum <= totalDays; dayNum++) {
+        const d = new Date(mStart.getFullYear(), mStart.getMonth(), dayNum);
+        const ds = format(d, "yyyy-MM-dd");
+        const dayTx = displayTx.filter((t) => format(new Date(t.date), "yyyy-MM-dd") === ds);
+        days.push({ day: String(dayNum), ...calcBucket(dayTx) });
+      }
+      return days;
+    }
+
+    // All time: group by month (MMM yy)
+    const buckets = new Map();
+    [...displayTx]
+      .sort((a, b) => new Date(a.date) - new Date(b.date))
+      .forEach((t) => {
+        const d = new Date(t.date);
+        const key = format(d, "yyyy-MM");
+        const label = format(d, "MMM yy");
+        if (!buckets.has(key)) buckets.set(key, { label, items: [] });
+        buckets.get(key).items.push(t);
+      });
+    if (buckets.size === 0) {
+      return [{ day: format(now, "MMM yy"), income: 0, expense: 0 }];
+    }
+    return Array.from(buckets.values()).map((b) => ({ day: b.label, ...calcBucket(b.items) }));
+  }, [displayTx, range, tab]);
 
   const emptyForm = () => ({
     type: "income",
@@ -312,7 +362,7 @@ export default function Finance() {
 
       {/* Chart */}
       <div className="rounded-2xl bg-card border border-border p-4 mb-4 shadow-xs">
-        <h3 className="font-semibold text-foreground text-sm mb-3">7-Day Overview</h3>
+        <h3 className="font-semibold text-foreground text-sm mb-3">{chartTitle}</h3>
         <ResponsiveContainer width="100%" height={140}>
           <BarChart data={chartData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
@@ -328,8 +378,12 @@ export default function Finance() {
               }}
               formatter={(v) => `₹${v.toLocaleString("en-IN")}`}
             />
-            <Bar dataKey="income" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="expense" fill="#ef4444" radius={[4, 4, 0, 0]} />
+            {tab !== "expense" && (
+              <Bar dataKey="income" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+            )}
+            {tab !== "income" && (
+              <Bar dataKey="expense" fill="#ef4444" radius={[4, 4, 0, 0]} />
+            )}
           </BarChart>
         </ResponsiveContainer>
       </div>

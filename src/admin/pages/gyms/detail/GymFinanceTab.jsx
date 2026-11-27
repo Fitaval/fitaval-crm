@@ -115,12 +115,12 @@ export function GymFinanceTab({ g }) {
                     </p>
                   </div>
                   <p className="mt-0.5 text-sm text-zinc-600">
-                    {t.description || (sal && sal.name ? 'Salary - ' + sal.name : 'No description')}
+                    {t.description || t.desc || (sal && sal.name ? 'Salary - ' + sal.name : 'No description')}
                   </p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-800">
                       <Icon n="CreditCard" size={13} />
-                      {t.paymentMethod}
+                      {t.paymentMethod || t.payment_method || t.method || 'Online'}
                     </span>
                     <span
                       className={cx(
