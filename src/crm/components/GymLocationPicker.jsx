@@ -102,35 +102,55 @@ export function GymLocationPicker({
       return;
     }
     setGeoLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const userLat = Number(pos.coords.latitude.toFixed(5));
-        const userLng = Number(pos.coords.longitude.toFixed(5));
-        let detectedAddress = currentAddress || "";
-        let detectedCity = currentCity || "";
 
-        try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLat}&lon=${userLng}&zoom=18&addressdetails=1`,
-            { headers: { "Accept-Language": "en" } }
-          );
-          if (res.ok) {
-            const data = await res.json();
-            const addr = data.address || {};
-            detectedCity = addr.city || addr.town || addr.county || addr.state_district || addr.state || detectedCity;
-            detectedAddress = data.display_name || `${userLat}, ${userLng}`;
-          }
-        } catch (e) {
-          console.warn("Reverse geocode failed:", e);
+    const onSuccess = async (pos) => {
+      const userLat = Number(pos.coords.latitude.toFixed(5));
+      const userLng = Number(pos.coords.longitude.toFixed(5));
+      let detectedAddress = currentAddress || "";
+      let detectedCity = currentCity || "";
+
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLat}&lon=${userLng}&zoom=18&addressdetails=1`,
+          { headers: { "Accept-Language": "en" } }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          const addr = data.address || {};
+          detectedCity = addr.city || addr.town || addr.county || addr.state_district || addr.state || detectedCity;
+          detectedAddress = data.display_name || `${userLat}, ${userLng}`;
         }
+      } catch (e) {
+        console.warn("Reverse geocode failed:", e);
+      }
 
-        updateLocation(detectedAddress, detectedCity, userLat, userLng);
-        setGeoLoading(false);
-      },
+      updateLocation(detectedAddress, detectedCity, userLat, userLng);
+      setGeoLoading(false);
+    };
+
+    const onFinalError = (err) => {
+      console.warn("Geolocation error:", err);
+      setGeoLoading(false);
+      if (err?.code === err?.PERMISSION_DENIED) {
+        alert("Location permission was denied. Please allow location access in your browser settings or search your address manually.");
+      } else {
+        alert("Could not fetch device location. Please search your address or click on the map.");
+      }
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      onSuccess,
       (err) => {
-        console.error("Geolocation error:", err);
-        setGeoLoading(false);
-        alert("Could not fetch device GPS location. Please check browser location permissions.");
+        // High-accuracy GPS often times out or is unavailable on desktop browsers; retry with network/IP location.
+        if (err?.code !== err?.PERMISSION_DENIED) {
+          navigator.geolocation.getCurrentPosition(
+            onSuccess,
+            onFinalError,
+            { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+          );
+          return;
+        }
+        onFinalError(err);
       },
       { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
     );

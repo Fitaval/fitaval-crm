@@ -55,14 +55,22 @@ export function startCrmSession(user, token, meta = {}) {
  * Authenticates user strictly against backend API (/api/v1/auth/login/).
  * Returns Promise<{ ok: true, role } | { ok: false, error }>.
  */
-export async function login(email, password) {
+export async function login(email, password, { realm = '' } = {}) {
   const e = (email || '').trim().toLowerCase();
   if (!e || !password) return { ok: false, error: 'Enter your email and password.' };
 
+  const cleanRealm = (realm || '').trim().toLowerCase();
+  const endpoint =
+    cleanRealm === 'admin'
+      ? '/auth/admin/login/'
+      : cleanRealm === 'crm'
+        ? '/auth/portal/login/'
+        : '/auth/login/';
+
   try {
     const data = await httpClient.post(
-      '/auth/login/',
-      { email: e, password },
+      endpoint,
+      { email: e, password, ...(cleanRealm ? { realm: cleanRealm } : {}) },
       { skipAuth: true, retryOn401: false }
     );
 
@@ -98,6 +106,8 @@ export async function login(email, password) {
           ? 'Invalid email or password.'
           : err.message || 'Unable to connect to authentication server. Please check your backend.',
       needsVerification: Boolean(err.data?.needs_verification),
+      portalSelectionRequired: err.status === 409 && err.data?.code === 'portal_selection_required',
+      availablePortals: err.data?.available_portals || [],
       email: err.data?.email || e,
     };
   }
@@ -154,7 +164,7 @@ export async function signUp(email, password, meta = {}) {
 export async function resendSignUpOtp(email) {
   try {
     await httpClient.post(
-      '/auth/send-otp/',
+      '/auth/portal/resend-otp/',
       { email },
       { skipAuth: true, retryOn401: false }
     );

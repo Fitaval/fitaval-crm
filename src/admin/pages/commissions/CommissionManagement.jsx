@@ -57,7 +57,7 @@ export function CommissionManagement() {
   const handleOpenEdit = (gym) => {
     setEditGym(gym);
     setNewRate(gym.commission_percentage !== null ? String(gym.commission_percentage) : '10.0');
-    setReason('');
+    setReason(gym.commission_reason || '');
   };
 
   const handleSaveCommission = async () => {
@@ -76,7 +76,16 @@ export function CommissionManagement() {
     try {
       const updated = await adminClient.commissions.update(editGym.id, rateNum, reason);
       setGyms((prev) =>
-        prev.map((g) => (g.id === editGym.id ? { ...g, commission_percentage: rateNum } : g))
+        prev.map((g) =>
+          g.id === editGym.id
+            ? {
+                ...g,
+                ...(updated && typeof updated === 'object' ? updated : {}),
+                commission_percentage: updated?.commission_percentage ?? rateNum,
+                commission_reason: updated?.commission_reason ?? reason,
+              }
+            : g
+        )
       );
       toast({
         title: 'Commission updated',

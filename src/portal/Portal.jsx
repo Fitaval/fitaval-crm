@@ -78,6 +78,7 @@ export const ConfigErrorScreen = ({ errors }) => (
 
 const AUTH_PAGES = {
   '/login': Login,
+  '/admin/login': Login,
   '/register': Register,
   '/forgot-password': ForgotPassword,
   '/reset-password': ResetPassword,
@@ -232,7 +233,9 @@ export default function Portal() {
   if (!session) {
     if (!AuthPage) {
       const back = pathname + search;
-      const target = '/login' + (back !== '/' ? '?returnTo=' + encodeURIComponent(back) : '');
+      const isAdminTarget = pathname === '/admin' || pathname.startsWith('/admin/');
+      const loginPath = isAdminTarget ? '/admin/login' : '/login';
+      const target = loginPath + (back !== '/' ? '?returnTo=' + encodeURIComponent(back) : '');
       // When at root '/' or another path, replace URL state in browser history and render Login immediately
       if (pathname === '/') {
         window.history.replaceState(null, '', target);
