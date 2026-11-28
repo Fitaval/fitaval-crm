@@ -344,10 +344,35 @@ export default function Plans() {
   const handleSavePlan = async (e) => {
     if (e) e.preventDefault();
     if (savingRef.current) return;
-    if (!form.name.trim() || !form.price) {
+    const trimmedName = form.name.trim();
+    if (!trimmedName || !form.price) {
       toast({
         title: "Validation error",
         description: "Plan name and price are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const duplicatePlan = plans.find(
+      (p) =>
+        (p.name || "").trim().toLowerCase() === trimmedName.toLowerCase() &&
+        (!isEditMode || p.id !== form.id)
+    );
+    if (duplicatePlan) {
+      toast({
+        title: "Plan name already exists",
+        description: `A plan named "${duplicatePlan.name}" already exists (${duplicatePlan.is_active ? "ON" : "OFF"}). Please use a different name or edit the existing plan.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const trimmedBadge = (form.badge_text || "").trim();
+    if (trimmedBadge.length > 50) {
+      toast({
+        title: "Validation error",
+        description: "Plan badge / highlight tag must be 50 characters or fewer.",
         variant: "destructive",
       });
       return;
@@ -358,18 +383,20 @@ export default function Plans() {
     try {
       const durationDays = calculateDays(form.duration_value, form.duration_unit);
       const combinedBenefits = JSON.stringify(form.benefitsList);
-      const priceNum = parseFloat(form.price) || 0;
-      const origPriceNum = form.original_price ? parseFloat(form.original_price) : null;
+      const priceNum = Number((parseFloat(form.price) || 0).toFixed(2));
+      const origPriceNum = form.original_price
+        ? Number((parseFloat(form.original_price) || 0).toFixed(2))
+        : null;
       const discountPct = (origPriceNum && origPriceNum > priceNum)
         ? Math.round(((origPriceNum - priceNum) / origPriceNum) * 100)
         : 0;
 
       const payload = {
-        name: form.name.trim(),
+        name: trimmedName,
         price: priceNum,
         original_price: origPriceNum,
         discount_percent: discountPct,
-        badge_text: (form.badge_text || "").trim(),
+        badge_text: trimmedBadge,
         duration_value: parseInt(form.duration_value, 10) || 1,
         duration_unit: form.duration_unit,
         duration_days: durationDays,

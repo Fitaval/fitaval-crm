@@ -83,10 +83,11 @@ async function refreshAccessToken() {
     );
   }
 
-  const data = await response.json();
+  const json = await response.json();
+  const data = json?.data && typeof json.data === 'object' ? json.data : json;
   const newAccessToken = data.access || data.access_token || data.token;
   if (!newAccessToken) {
-    throw new ApiError('Invalid refresh token response shape', 500, data);
+    throw new ApiError('Invalid refresh token response shape', 500, json);
   }
 
   tokenManager.setAccessToken(newAccessToken);
