@@ -71,8 +71,8 @@ export function GymStaffTab({ g }) {
       label: 'Staff member',
       type: 'text',
       w: 220,
-      get: (s) => s.name + ' ' + s.role,
-      render: (s) => nameBtn(s.name, s.role, () => setOpen(s.id)),
+      get: (s) => s.name,
+      render: (s) => nameBtn(s.name, null, () => setOpen(s.id)),
     },
     { id: 'phone', label: 'Phone number', type: 'text', get: (s) => s.phone },
     {
@@ -114,7 +114,6 @@ export function GymStaffTab({ g }) {
           onClose={() => setOpen(null)}
           badges={
             <>
-              <Badge tone="muted">{cur.role}</Badge>
               <Badge tone={tone[cur.status]}>{cur.status}</Badge>
               {actBadge(cur.active)}
             </>
@@ -130,7 +129,6 @@ export function GymStaffTab({ g }) {
             [
               'Work',
               [
-                ['Role', cur.role],
                 ['Joined', fmtDate(cur.since)],
                 ['Operating hours', <HoursSchedule hours={cur.hours || g?.hours} />, true],
               ],
@@ -289,13 +287,13 @@ export function GymMembersTab({ g }) {
               'Membership',
               [
                 ['Plan', cur.plan],
-                ['Plan fee', inr(cur.fee)],
+                ['Plan fee', cur.fee != null && !isNaN(Number(cur.fee)) ? inr(Number(cur.fee)) : '—'],
                 ['Start date', fmtDate(cur.start)],
                 ['End date', fmtDate(cur.end)],
-                ['Assigned trainer', cur.trainer],
-                ['Last visit', fmtDate(cur.last)],
-                ['Payment method', cur.payMethod, true],
-                ['QR token', <span className="font-mono text-xs">{cur.token}</span>, true],
+                ['Assigned trainer', cur.trainer || '—'],
+                ['Last visit', cur.last ? fmtDate(cur.last) : 'Never'],
+                ['Payment method', cur.payMethod || '—', true],
+                ['QR token', <span className="font-mono text-xs">{cur.token || '—'}</span>, true],
               ],
             ],
           ]}

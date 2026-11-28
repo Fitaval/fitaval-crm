@@ -65,7 +65,6 @@ export function StaffTab() {
                       <Avatar name={s.name} size={32} />
                       <div>
                         <p className="font-medium">{s.name}</p>
-                        <p className="text-xs text-zinc-500">{s.role}</p>
                       </div>
                     </div>
                   </td>

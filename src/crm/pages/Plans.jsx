@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { client } from "@/api/client";
 import { useSessionQuery } from "../../shared/cache/useSessionQuery";
 import { useToast } from "@/components/ui/use-toast";
@@ -198,6 +198,7 @@ export default function Plans() {
   const [selectedPlan, setSelectedPlan] = useState(null);
 
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [benefitTitle, setBenefitTitle] = useState("");
   const [benefitDesc, setBenefitDesc] = useState("");
 
@@ -342,6 +343,7 @@ export default function Plans() {
 
   const handleSavePlan = async (e) => {
     if (e) e.preventDefault();
+    if (savingRef.current) return;
     if (!form.name.trim() || !form.price) {
       toast({
         title: "Validation error",
@@ -351,6 +353,7 @@ export default function Plans() {
       return;
     }
 
+    savingRef.current = true;
     setSaving(true);
     try {
       const durationDays = calculateDays(form.duration_value, form.duration_unit);
@@ -397,6 +400,7 @@ export default function Plans() {
     } catch (err) {
       toast({ title: "Failed to save plan", description: err.message, variant: "destructive" });
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
