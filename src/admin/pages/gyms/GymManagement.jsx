@@ -348,12 +348,12 @@ export function ReviewModal({ g, onClose, onDone }) {
             {bankAcc.verification_status === 'verified' && (
               <div className="flex items-center justify-between pt-1 text-xs">
                 <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
-                  <Icon n="Lock" size={12} />
-                  Account locked & ready for withdrawals
+                  <Icon n="ShieldCheck" size={13} />
+                  Verified & active for withdrawals
                 </span>
                 {perms.editGym && (
                   <Btn size="sm" v="outline" onClick={() => setShowUnlockModal(true)}>
-                    Unlock Account
+                    Allow Bank Change
                   </Btn>
                 )}
               </div>
@@ -366,7 +366,11 @@ export function ReviewModal({ g, onClose, onDone }) {
 
       {showUnlockModal && (
         <div className="mt-4 space-y-3 rounded-lg border-2 border-zinc-950 p-3 bg-zinc-50 dark:bg-zinc-900">
-          <Field label="Reason for Unlocking Bank Account" id="unlock-reason" sub="Required for audit trail">
+          <Field
+            label="Reason for Allowing Bank Account Change"
+            id="unlock-reason"
+            sub="Resets current verification so the gym owner can link a new bank account (audit trail)"
+          >
             <input
               id="unlock-reason"
               className={inputCls}
@@ -377,7 +381,7 @@ export function ReviewModal({ g, onClose, onDone }) {
           </Field>
           <div className="flex gap-2">
             <Btn v="dark" disabled={!unlockReason.trim() || bankProcessing} onClick={handleUnlockBank}>
-              {bankProcessing ? 'Unlocking...' : 'Confirm Unlock'}
+              {bankProcessing ? 'Resetting...' : 'Allow Change'}
             </Btn>
             <Btn
               v="ghost"

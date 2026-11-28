@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import AuthShell, { PasswordField } from './AuthShell';
 import { login, homePath } from './session';
+import {
+  usePwaInstall,
+  isLoginInstallDismissed,
+  dismissLoginInstallPrompt,
+  getManualInstallHint,
+} from '../shared/pwa/usePwaInstall';
 
 function safeReturnTo(role) {
   const raw = new URLSearchParams(window.location.search).get('returnTo');
@@ -22,6 +28,23 @@ export default function Login() {
   const [portalSelection, setPortalSelection] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const { isInstalled, isIOS, promptInstall } = usePwaInstall();
+  const [installDismissed, setInstallDismissed] = useState(isLoginInstallDismissed);
+  const [manualHint, setManualHint] = useState('');
+
+  const handleDismissInstall = () => {
+    dismissLoginInstallPrompt();
+    setInstallDismissed(true);
+  };
+
+  const handleInstallClick = async () => {
+    const res = await promptInstall();
+    if (res.outcome === 'accepted') {
+      setInstallDismissed(true);
+    } else if (res.outcome === 'manual') {
+      setManualHint(getManualInstallHint(isIOS));
+    }
+  };
 
   const performLogin = async (explicitRealm = '') => {
     setLoading(true);
@@ -103,6 +126,36 @@ export default function Login() {
           {loading ? 'Signing in...' : 'Sign in'}
         </button>
       </form>
+      {!isInstalled && !installDismissed && (
+        <div className="pt-install-banner" role="dialog" aria-label="Install Fitaval Web App">
+          <div className="pt-install-row">
+            <img src="/fitaval-logo-light.png" alt="Fitaval" className="pt-install-icon pt-install-icon-light" />
+            <img src="/fitaval-logo-dark.png" alt="Fitaval" className="pt-install-icon pt-install-icon-dark" />
+            <div className="pt-install-copy">
+              <p className="pt-install-title">Install Fitaval Web App</p>
+              <p className="pt-install-desc">Get faster access directly from your home screen or desktop.</p>
+            </div>
+            <button
+              type="button"
+              className="pt-install-close"
+              onClick={handleDismissInstall}
+              aria-label="Dismiss install prompt"
+              title="Dismiss"
+            >
+              &times;
+            </button>
+          </div>
+          {manualHint && <p className="pt-install-hint">{manualHint}</p>}
+          <div className="pt-install-actions">
+            <button type="button" className="pt-install-later" onClick={handleDismissInstall}>
+              Not now
+            </button>
+            <button type="button" className="pt-install-btn" onClick={handleInstallClick}>
+              Download App
+            </button>
+          </div>
+        </div>
+      )}
     </AuthShell>
   );
 }

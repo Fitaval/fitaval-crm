@@ -1,14 +1,28 @@
+import { useState } from 'react';
+import { Download } from 'lucide-react';
 import { Icon } from '../components/Icon';
 import { Avatar } from '../components/ui/Avatar';
 import { Btn } from '../components/ui/Button';
 import { useApp } from '../context/AppContext';
 import { SEC_TITLE } from '../data/navigation';
 import { TODAY } from '../lib/utils';
+import { usePwaInstall, getManualInstallHint } from '../../shared/pwa/usePwaInstall';
 
 export function Header({ onMenu, onBell, collapsed, onCollapse }) {
   const { section, roleObj, alerts, dark, toggleTheme, gyms } = useApp();
+  const { isInstalled, isIOS, promptInstall } = usePwaInstall();
+  const [installHintOpen, setInstallHintOpen] = useState(false);
   const unread = alerts.filter((a) => !a.read).length;
   const liveGymCount = Object.keys(gyms || {}).length;
+
+  const handleInstallApp = async () => {
+    const res = await promptInstall();
+    if (res.outcome === 'manual') {
+      setInstallHintOpen((prev) => !prev);
+    } else {
+      setInstallHintOpen(false);
+    }
+  };
   return (
     <header className="sticky z-30 border-b border-zinc-200 bg-white" style={{ top: 'env(safe-area-inset-top,0px)' }}>
       <div className="gutter flex items-center gap-3 py-3">
@@ -30,10 +44,40 @@ export function Header({ onMenu, onBell, collapsed, onCollapse }) {
             {new Date(TODAY).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
           </p>
         </div>
-        <div className="ml-auto flex items-center gap-2 sm:gap-3">
+        <div className="ml-auto flex items-center gap-2 sm:gap-3 relative">
           <span className="hidden items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 sm:inline-flex">
             <span className="pulse-ring h-2 w-2 rounded-full bg-emerald-500"></span>{liveGymCount} {liveGymCount === 1 ? 'gym live' : 'gyms live'}
           </span>
+          {!isInstalled && (
+            <button
+              type="button"
+              onClick={handleInstallApp}
+              aria-label="Download Web App"
+              title="Download Web App"
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-zinc-200 bg-white px-2.5 text-xs font-medium text-zinc-900 hover:bg-zinc-50"
+            >
+              <Download className="h-4 w-4 text-emerald-600" />
+              <span className="hidden sm:inline">Download App</span>
+            </button>
+          )}
+          {installHintOpen && (
+            <div className="absolute right-0 top-11 z-50 w-72 rounded-xl border border-zinc-200 bg-white p-3 shadow-lg text-xs text-zinc-900">
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-semibold">Install Fitaval Web App</p>
+                <button
+                  type="button"
+                  onClick={() => setInstallHintOpen(false)}
+                  className="text-zinc-500 hover:text-zinc-900 leading-none px-1"
+                  aria-label="Close install hint"
+                >
+                  &times;
+                </button>
+              </div>
+              <p className="mt-1 text-zinc-600 leading-relaxed">
+                {getManualInstallHint(isIOS)}
+              </p>
+            </div>
+          )}
           <button
             onClick={toggleTheme}
             aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}

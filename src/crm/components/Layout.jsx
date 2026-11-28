@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Outlet, NavLink, Link, useLocation } from "react-router-dom";
 import {
   Bell,
+  Download,
   LogOut,
   ChevronLeft,
   HelpCircle,
@@ -20,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { client } from "@/api/client";
 import { NAV_ITEMS } from "@/data";
 import { getSession } from "../../portal/session";
+import { usePwaInstall, getManualInstallHint } from "../../shared/pwa/usePwaInstall";
 import NotificationsDrawer, { useNotifications } from "./NotificationsDrawer";
 
 const desktopNavItems = NAV_ITEMS;
@@ -31,7 +33,18 @@ export default function Layout() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profile, setProfile] = useState(null);
   const [logoError, setLogoError] = useState(false);
+  const [installHintOpen, setInstallHintOpen] = useState(false);
+  const { isInstalled, isIOS, promptInstall } = usePwaInstall();
   const notificationState = useNotifications();
+
+  const handleInstallApp = async () => {
+    const res = await promptInstall();
+    if (res.outcome === "manual") {
+      setInstallHintOpen((prev) => !prev);
+    } else {
+      setInstallHintOpen(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -231,9 +244,14 @@ export default function Layout() {
             <div className="flex items-center gap-2.5">
               <Link to="/" className="flex items-center gap-2">
                 <img
-                  src="/fitaval_logo.png"
+                  src="/fitaval-logo-light.png"
                   alt="Fitaval Logo"
-                  className="w-8 h-8 rounded-xl object-contain p-1 shrink-0 lg:hidden bg-primary/10 border border-primary/20 shadow-xs"
+                  className="w-10 h-10 object-contain shrink-0 lg:hidden dark:hidden"
+                />
+                <img
+                  src="/fitaval-logo-dark.png"
+                  alt="Fitaval Logo"
+                  className="hidden w-10 h-10 object-contain shrink-0 lg:hidden dark:block"
                 />
                 <div className="min-w-0">
                   <h1 className="font-bold text-sm sm:text-base lg:text-lg text-foreground leading-tight truncate">
@@ -246,8 +264,38 @@ export default function Layout() {
               </Link>
             </div>
 
-            {/* Right: Notification & Profile */}
-            <div className="flex items-center gap-2">
+            {/* Right: Install App, Notification & Profile */}
+            <div className="flex items-center gap-2 relative">
+              {!isInstalled && (
+                <button
+                  type="button"
+                  onClick={handleInstallApp}
+                  className="inline-flex h-10 w-10 sm:w-auto sm:px-3 rounded-xl border border-border bg-background hover:bg-muted items-center justify-center gap-1.5 text-xs font-semibold text-foreground transition-colors touch-manipulation"
+                  aria-label="Download Web App"
+                  title="Download Web App"
+                >
+                  <Download className="w-4 h-4 shrink-0 text-primary" />
+                  <span className="hidden sm:inline">Download App</span>
+                </button>
+              )}
+              {installHintOpen && (
+                <div className="absolute right-0 top-12 z-50 w-72 rounded-xl border border-border bg-card p-3 shadow-lg text-xs text-foreground">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-semibold">Install Fitaval Web App</p>
+                    <button
+                      type="button"
+                      onClick={() => setInstallHintOpen(false)}
+                      className="text-muted-foreground hover:text-foreground leading-none px-1"
+                      aria-label="Close install hint"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                  <p className="mt-1 text-muted-foreground leading-relaxed">
+                    {getManualInstallHint(isIOS)}
+                  </p>
+                </div>
+              )}
               <button
                 type="button"
                 onClick={() => setNotificationsOpen(true)}
